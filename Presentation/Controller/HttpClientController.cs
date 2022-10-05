@@ -1,35 +1,43 @@
-﻿
-using System.Net;
+﻿using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Net.Sockets;
+using System.Text;
 
 namespace Presentation.Controller;
 
 internal class HttpClientController
 {
-    private Socket _tcpClient;
-    HttpClientController(string ip = "127.0.0.1", int port = 8000)
+    private HttpClient _httpClient;
+    private Uri _baseUri;
+    public HttpClientController(string ip = "127.0.0.1")
     {
         try
         {
-            IPEndPoint ipEndPoint = new(IPAddress.Parse(ip), port);
-            var listener = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(ipEndPoint);
+            _baseUri = new Uri(ip);
+            _httpClient = new();
+            _httpClient.BaseAddress = _baseUri;
+            _httpClient.DefaultRequestHeaders
+                        .Accept
+                        .Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
         catch (SocketException ex)
         {
             //log
-            Console.WriteLine($"Error at creating Socket\nError: {ex.Message}");
+            Console.WriteLine($"Error at creating HttpClient\nError: {ex.Message}");
         }
+
     }
 
     ~HttpClientController()
     {
-        _tcpClient.Dispose();
-        _tcpClient = null;
+        _httpClient.Dispose();
+        _httpClient = null;
     }
 
     private async Task Request()
     {
-
+        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUri}/users");
+        request.Content = new StringContent("{\"username\":\"deniial\",\"password\":\"testy\"}", Encoding.UTF8, "application/json");
     }
 }

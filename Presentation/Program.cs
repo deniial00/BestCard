@@ -1,5 +1,13 @@
-﻿// See https://aka.ms/new-console-template for more information
-using System.Net;
+﻿using Presentation.Controller;
 
-Console.WriteLine("Hello, World!");
+namespace Logic;
 
+public class Program
+{
+    public static int Main(string[] args)
+    {
+        var client = new HttpClientController();
+
+        return 0;
+    }
+}
