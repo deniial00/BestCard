@@ -1,13 +1,13 @@
 ﻿using Presentation.Controller;
 
-namespace Logic;
 
-public class Program
+try 
 {
-    public static int Main(string[] args)
-    {
-        var client = new HttpClientController();
+    var client = new HttpClientController();
+    await client.Request();
 
-        return 0;
-    }
+}
+catch(Exception ex)
+{
+    Console.WriteLine(ex);
 }

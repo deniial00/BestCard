@@ -9,15 +9,18 @@ class HttpServerController
     private HttpListener _httpListener;
     public HttpServerController()
     {
+        Console.Write("Server starting ...");
         try
         {
             _httpListener = new();
+            _httpListener.Prefixes.Add("http://+:80/");
         }
-        catch (SocketException ex)
+        catch (HttpListenerException ex)
         {
             //log
-            Console.WriteLine($"Error at creating Socket\nError: {ex.Message}");
+            Console.Write("Error at creating Socket\nError: {ex.Message}");
         }
+        Console.Write(" OK!\n");
     }
 
     public async Task Listen()
@@ -26,8 +29,10 @@ class HttpServerController
 
         while (_httpListener.IsListening)
         {
+            Console.WriteLine("listening\n");
             HttpListenerContext context = await _httpListener.GetContextAsync();
             HttpListenerRequest request = context.Request;
+            Console.WriteLine(request.ToString());
 
             Uri? urlString = request.Url;
             HttpListenerResponse response = context.Response;

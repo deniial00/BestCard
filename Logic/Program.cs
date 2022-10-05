@@ -1,32 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Logic.CardLogic;
-using Logic.Controller;
+﻿using Logic.Controller;
 using Logic.Models;
 using Logic.Models.Cards;
 using Logic.Models.Cards.Monsters;
 using Logic.Models.Cards.Spells;
 
-namespace Logic;
 
-
-
-public class Program
+try
 {
-    public static int Main(string[] args)
-    {
-        var server = new HttpServerController();
-        server.Listen();
-
-
-        return 0;
-    }
+    var server = new HttpServerController();
+    await server.Listen();
 
 }
+catch(Exception ex)
+{
+    Console.WriteLine(ex);
+}
+
 
 //public class Program
 //{

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Logic.Models.Cards;
 
-namespace Logic.CardLogic
+namespace Logic.Controller
 {
     class BattleController
     {
@@ -38,7 +38,8 @@ namespace Logic.CardLogic
             if (card1Remaining <= 0 && card2Remaining > 0)
             {
                 return card2;
-            } else if (card2Remaining <= 0 && card1Remaining > 0)
+            }
+            else if (card2Remaining <= 0 && card1Remaining > 0)
             {
                 return card1;
             }

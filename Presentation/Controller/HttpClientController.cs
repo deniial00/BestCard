@@ -10,8 +10,9 @@ internal class HttpClientController
 {
     private HttpClient _httpClient;
     private Uri _baseUri;
-    public HttpClientController(string ip = "127.0.0.1")
+    public HttpClientController(string ip = "http://localhost/")
     {
+        Console.Write("Client starting ...");
         try
         {
             _baseUri = new Uri(ip);
@@ -21,12 +22,13 @@ internal class HttpClientController
                         .Accept
                         .Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
-        catch (SocketException ex)
+        catch (HttpRequestException ex)
         {
             //log
             Console.WriteLine($"Error at creating HttpClient\nError: {ex.Message}");
+            throw;
         }
-
+        Console.WriteLine(" OK!\n");
     }
 
     ~HttpClientController()
@@ -35,9 +37,11 @@ internal class HttpClientController
         _httpClient = null;
     }
 
-    private async Task Request()
+    public async Task Request()
     {
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUri}/users");
         request.Content = new StringContent("{\"username\":\"deniial\",\"password\":\"testy\"}", Encoding.UTF8, "application/json");
+        var response = await _httpClient.SendAsync(request); 
+        Console.WriteLine(response.Content);
     }
 }
