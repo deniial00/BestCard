@@ -4,7 +4,9 @@
 try 
 {
     var client = new HttpClientController();
-    await client.Request();
+    Console.Write("Enter message:");
+    string message = Console.ReadLine();
+    await client.Request(message);
 
 }
 catch(Exception ex)

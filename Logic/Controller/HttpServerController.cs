@@ -32,7 +32,8 @@ class HttpServerController
             Console.WriteLine("listening\n");
             HttpListenerContext context = await _httpListener.GetContextAsync();
             HttpListenerRequest request = context.Request;
-            Console.WriteLine(request.ToString());
+
+            await HandleRequest(context);
 
             Uri? urlString = request.Url;
             HttpListenerResponse response = context.Response;
@@ -44,8 +45,20 @@ class HttpServerController
         _httpListener.Stop();
     }
 
-    public async Task HandleRequest(Task<Socket> sock)
+    public async Task HandleRequest(HttpListenerContext context)
     {
+        var input = new StreamReader(context.Request.InputStream).ReadToEnd();
+        Console.WriteLine(input);
+
+        byte[] buffer = Encoding.UTF8.GetBytes("{\"data\":\"testy\"}");
+        context.Response.StatusCode = 200;
+        context.Response.KeepAlive = false;
+        context.Response.ContentLength64 = buffer.Length;
+
+        var output = context.Response.OutputStream;
+        output.Write(buffer, 0, buffer.Length);
+        
+        context.Response.Close();
 
         return;
     }

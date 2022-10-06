@@ -37,11 +37,14 @@ internal class HttpClientController
         _httpClient = null;
     }
 
-    public async Task Request()
+    public async Task Request(string message)
     {
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUri}/users");
-        request.Content = new StringContent("{\"username\":\"deniial\",\"password\":\"testy\"}", Encoding.UTF8, "application/json");
-        var response = await _httpClient.SendAsync(request); 
-        Console.WriteLine(response.Content);
+        request.Content = new StringContent("{\"message\":\""+message+"\"}", Encoding.UTF8, "application/json");
+        var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        Console.WriteLine(content);
+
     }
 }
