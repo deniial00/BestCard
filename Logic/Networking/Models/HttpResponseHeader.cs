@@ -6,8 +6,6 @@ namespace Logic.Networking.Models;
 
 public class HttpResponseHeader : IHttpHeader
 {
-    public Uri Uri { get; private set; }
-
     public Dictionary<string, string> Headers { get; }
 
     public HTTPMethodType MethodType { get; private set; }
@@ -21,8 +19,9 @@ public class HttpResponseHeader : IHttpHeader
     public HttpResponseHeader(string utf8Data)
     {
         // set message type => needed for further processing
+        Headers = new();
 
-        using (StreamReader reader = new StreamReader(utf8Data))
+        using (StringReader reader = new StringReader(utf8Data))
         {
             string line; int lineNum = 1;
 
@@ -46,22 +45,27 @@ public class HttpResponseHeader : IHttpHeader
                 // method + uri + protocol vers
                 parsedString = line.Split(' ').ToList();
                 
-                if (parsedString.Count != 2)
+                if (parsedString.Count != 3)
                     throw new ArgumentException("Invalid Header");
 
                 if (MessageType != HTTPMessageType.Response)
                     throw new ArgumentException("Invalid MessageType");
 
                 // Parse Protocl Version 
-                Regex rg = new Regex(@"\1(HTTP)\2(\/)\3([0-9]\.[0-9])");
-                GroupCollection protocolMatchGroup = rg.Match(parsedString[0]).Groups;
+                //Regex rg = new Regex(@"^\1(HTTP\/)\2([0-9]\.[0-9])");
+                //GroupCollection protocolMatchGroup = rg.Match(parsedString[0]).Groups;
 
-                // check if it starts with HTTP and follows with trailing slash => too stupid for regex
-                if (protocolMatchGroup[0].Value != "HTTP" || protocolMatchGroup[1].Value != "/")
+                //// check if it starts with HTTP and follows with trailing slash => too stupid for regex
+                //if (protocolMatchGroup[0].Value != "HTTP" || protocolMatchGroup[1].Value != "/")
+                //    throw new ArgumentException("Invalid Protocol");
+
+                var protocolString = parsedString[0].Split("/");
+
+                if (protocolString[0] != "HTTP")
                     throw new ArgumentException("Invalid Protocol");
 
                 // check supported versions
-                switch (protocolMatchGroup[2].Value)
+                switch (protocolString[1])
                 {
                     case "1.1":
                         HttpVersion = "1.1";
@@ -80,7 +84,7 @@ public class HttpResponseHeader : IHttpHeader
                 StatusCode = tempStatusCode;
                 break;
             default:
-                parsedString = line.Split(':').ToList();
+                parsedString = line.Split(':',2).ToList();
 
                 // throw if there are not 2 elements
                 if (parsedString.Count != 2)

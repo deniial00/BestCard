@@ -51,51 +51,34 @@ public class HttpRequestHeader : IHttpHeader
             case 1:
                 // method + uri + protocol vers
                 parsedString = line.Split(' ').ToList();
-                if (parsedString.Count != 2)
+                if (parsedString.Count != 3)
                 {
                     // PROBLEM!!
                 }
-                if (MessageType == HTTPMessageType.Request)
+               
+                // Parse Method Type
+                try
                 {
-                    // Parse Method Type
-                    try
-                    {
-                        Enum.TryParse<HTTPMethodType>(parsedString[0], out var tempMethodType);
-                        MethodType = tempMethodType;
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        throw new ArgumentException("Not supported Status Code");
-                    }
-
-                    // Parse Url 
-                    try
-                    {
-                        Uri = new Uri(parsedString[1]);
-                    }
-                    catch (UriFormatException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        throw new ArgumentException("Invalid Url");
-                    }
-
-                    // Parse Protocol
-
+                    Enum.TryParse<HTTPMethodType>(parsedString[0], out var tempMethodType);
+                    MethodType = tempMethodType;
                 }
-                else if (MessageType == HTTPMessageType.Response)
+                catch (ArgumentException ex)
                 {
-                    // Parse Protocol
-
-
-                    // Parse Status Code
-                    Enum.TryParse<HTTPStatusCode>(parsedString[1], out var tempStatusCode);
-                    StatusCode = tempStatusCode;
+                    Console.WriteLine(ex.Message);
+                    throw new ArgumentException("Not supported Status Code");
                 }
-                else
+
+                // Parse Url 
+                try
                 {
-                    throw new ArgumentException("Invalid MessageType");
+                    Uri = new Uri(parsedString[1]);
                 }
+                catch (UriFormatException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    throw new ArgumentException("Invalid Url");
+                }
+
 
                 // Parse Protocl Version 
                 switch (parsedString[2].Split('/')[1])
@@ -131,10 +114,10 @@ public class HttpRequestHeader : IHttpHeader
         Headers.Add(Header[0], Header[1]);
     }
 
-    public string ToString()
-    {
-        string 
-        return string;
-    }
+    //public override string ToString()
+    //{
+        
+    //    return string;
+    //}
 
 }

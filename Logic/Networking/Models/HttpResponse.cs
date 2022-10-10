@@ -1,17 +1,15 @@
 ﻿namespace Logic.Networking.Models;
 class HttpResponse
 {
-    public HTTPMessageType Type { get; private set; }
     public HttpResponseHeader Header { get; }
 
-    //public HTTPBody Body { get;  }
+    public HttpBody Body { get; }
 
-    public HttpResponse(string utf8Data, HTTPMessageType type)
+    public HttpResponse(string utf8Data)
     {
-        Type = type;
-        if (Type == HTTPMessageType.Response)
-            Header = new HttpResponseHeader(utf8Data);
-        else
-            throw new ArgumentException("Wrong Message Type");
+        List<string> parsedString = utf8Data.Split("\r\n\r\n").ToList<string>();
+
+        Header = new HttpResponseHeader(parsedString[0]);
+        //Body = new HttpBody(parsedString[1], Header.Headers["Content-Type"]);
     }
 }

@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Logic.Networking.Models;
 
-namespace Logic.Networking.Models
+interface IHttpBody
 {
-    internal interface IHttpBody
-    {
-    }
+    public string ContentType { get; set; }
+    public string Content { get;  set; }
+
+    public bool AddContent(string utf8data);
+
+    public string ToString();
 }

@@ -7,7 +7,6 @@ public interface IHttpHeader
     HTTPMessageType MessageType { get; }
     HTTPMethodType MethodType { get; }
     HTTPStatusCode StatusCode { get; }
-    Uri Uri { get; }
 
     void AddHeader(List<string> Header);
 }
