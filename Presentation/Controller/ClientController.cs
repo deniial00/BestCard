@@ -1,12 +1,8 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+﻿using System.Text;
 using System.Net.Sockets;
-using System.Text;
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
-namespace Presentation.Controller;
+namespace Client.Controller;
 
 class ClientController
 {
@@ -40,7 +36,7 @@ class ClientController
         var nwStream = _tcpClient.GetStream();
 
         // write
-        
+
         byte[] bytesToSend = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
         nwStream.Write(bytesToSend, 0, bytesToSend.Length);
 
@@ -60,7 +56,7 @@ class ClientController
         request.Add("mode", "auth");
         request.Add("username", username);
         request.Add("password", password);
-        
+
         var response = Request(request);
 
         return response;
