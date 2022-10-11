@@ -60,15 +60,16 @@ class ServerController
             int bytesRead = nwStream.Read(buffer, 0, client.ReceiveBufferSize);
             string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-            var req1 = new HttpRequest(data, HTTPMessageType.Request);
+            var req = new HttpRequest(data, HTTPMessageType.Request);
             
             Console.Write(data);
             Thread.Sleep(2000);
             // convert data into beautiful dict
-            var req = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(data);
+            var reqBody = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(data);
 
             // Check for valid session and add token to response 
-            var res = new Dictionary<string, dynamic>();
+            var res = new HttpResponse();
+            var resBody = new Dictionary<string, dynamic>();
             //Session? session = CheckSession(req, client);
             //res.Add("token", session.Token);
 
