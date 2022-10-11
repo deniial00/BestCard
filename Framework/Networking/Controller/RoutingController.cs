@@ -1,5 +1,6 @@
-﻿using Framework.Networking.Models;
-using Framework.Networking.Models.Enums;
+﻿using Framework.Networking.HTTPComponents;
+using Framework.Networking.HTTPComponents.Enums;
+using Framework.Networking.Models;
 
 namespace Framework.Networking.Controller;
 
@@ -14,7 +15,7 @@ class RoutingController
 
     public void AddRoute(string route, HttpMethodType type, Func<HttpRequest, HttpResponse> func)
     {
-        var routeNode = new Route(type, func);
-        Routes.Add("route", routeNode);
+        var routeNode = new Route(route, type, func);
+        Routes.Add(route, routeNode);
     }
 }

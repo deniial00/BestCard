@@ -55,6 +55,7 @@ public class HttpRequestHeader : IHttpRequestHeader
             case 1:
                 // method + uri + protocol vers
                 parsedString = line.Split(' ').ToList();
+                
                 if (parsedString.Count != 3)
                     throw new ArgumentException("Invalid Header");
 

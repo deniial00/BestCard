@@ -17,8 +17,15 @@ class HttpResponse
         
         // set vars
         MessageType = HttpMessageType.Response;
-        Header = new HttpResponseHeader(parsedString[0]);
-        
+
+        try
+        {
+            Header = new HttpResponseHeader(parsedString[0]);
+        }
+        catch (ArgumentException) { throw; }
+        catch (NotSupportedException) { throw; }
+        catch (Exception) { throw; }
+
         // check if body exits
         if (parsedString[1].Length > 1)
             Body = new HttpBody(parsedString[1], Header.Headers["Content-Type"]);

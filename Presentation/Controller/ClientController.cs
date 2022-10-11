@@ -11,6 +11,8 @@ class ClientController
 
     public ClientController(string iPAddress = "localhost", int port = 1001)
     {
+        _token = "";
+
         Console.Write("Client starting ...");
         try
         {
@@ -28,7 +30,6 @@ class ClientController
     ~ClientController()
     {
         _tcpClient.Dispose();
-        _tcpClient = null;
     }
 
     private Dictionary<string, dynamic> Request(Dictionary<string, dynamic> message)
@@ -36,7 +37,6 @@ class ClientController
         var nwStream = _tcpClient.GetStream();
 
         // write
-
         byte[] bytesToSend = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
         nwStream.Write(bytesToSend, 0, bytesToSend.Length);
 
@@ -46,7 +46,8 @@ class ClientController
         string response = Encoding.UTF8.GetString(bytesToRead, 0, bytesRead);
 
         // return res
-        return JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(response);
+        var res = JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(response);
+        return res != null ? res : throw new ArgumentException("Could not deserelize JSON");
 
     }
 

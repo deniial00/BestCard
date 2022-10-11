@@ -15,23 +15,29 @@ public class HttpResponseHeader : IHttpResponseHeader
     {
         Headers = new();
         HttpVersion = "";
-
-        using (var reader = new StringReader(utf8Data))
+        try
         {
-            string line;
-            int lineNum = 1;
-
-            while ((line = reader.ReadLine()) != null)
+            using (var reader = new StringReader(utf8Data))
             {
-                if (line == "")
-                    break;
+                string line;
+                int lineNum = 1;
 
-                ParseLine(line, lineNum);
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line == "")
+                        break;
 
-                // increment line number var
-                lineNum++;
+                    ParseLine(line, lineNum);
+
+                    // increment line number var
+                    lineNum++;
+                }
             }
+
         }
+        catch (ArgumentException) { throw; }
+        catch (NotSupportedException) { throw; }
+        catch (Exception){ throw; }
     }
 
     public HttpResponseHeader(string httpVersion, bool addDefaultHeaders = false)
@@ -47,34 +53,31 @@ public class HttpResponseHeader : IHttpResponseHeader
         switch (lineNum)
         {
             case 1:
-                // method + uri + protocol vers
+                // version + statusCode + statusCodeMessage
                 parsedString = line.Split(' ').ToList();
 
                 if (parsedString.Count != 3)
-                    throw new ArgumentException("Invalid Header");
-
-                if (MessageType != HttpMessageType.Response)
-                    throw new ArgumentException("Invalid MessageType", MessageType.ToString());
-
+                    throw new ArgumentException("Invalid Header", parsedString.ToString());
 
                 // Parse Protocl Version 
-                switch (parsedString[0].Split('/', 2)[1])
+                var protocolString = parsedString[0].Split('/', 2);
+                switch (protocolString[1])
                 {
                     case "1.1":
                         // check if protocol is HTTP
-                        if (parsedString[0] != "HTTP")
-                            throw new ArgumentException("Invalid Protocol", parsedString[0]);
+                        if (protocolString[0] != "HTTP")
+                            throw new ArgumentException("Invalid Protocol", protocolString[0]);
 
                         // set version
                         HttpVersion = "1.1";
                         break;
                     default:
-                        throw new ArgumentException("Not supported Protocol Version", parsedString[0]);
+                        throw new ArgumentException("Invalid Protocol", protocolString.ToString());
                 }
 
                 // Parse Status Code
                 if (!Enum.TryParse<HttpStatusCode>(parsedString[1], out var tempStatusCode))
-                    throw new ArgumentException("Invalid Status Code");
+                    throw new ArgumentException("Invalid Status Code", parsedString[1]);
 
                 StatusCode = tempStatusCode;
                 break;
@@ -83,7 +86,7 @@ public class HttpResponseHeader : IHttpResponseHeader
 
                 // throw if there are not 2 elements
                 if (parsedString.Count != 2)
-                    throw new ArgumentException("Invalid Header");
+                    throw new ArgumentException("Invalid Header", parsedString.ToString());
 
                 parsedString[0] = parsedString[0].Trim();
                 parsedString[1] = parsedString[1].Trim();
@@ -105,8 +108,6 @@ public class HttpResponseHeader : IHttpResponseHeader
 
     public override string ToString()
     {
-        //if (StatusCode == )
-        //    throw new ArgumentException("Missing StatusCode");
 
         // write first line
         string headerString = $"HTTP/{HttpVersion} {(int)StatusCode} {StatusCode} \r\n";

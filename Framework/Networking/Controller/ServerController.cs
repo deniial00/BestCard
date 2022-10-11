@@ -2,10 +2,10 @@
 using System.Text;
 using Newtonsoft.Json;
 using System.Net;
-
-
 using Framework.Networking.Models;
-using Framework.Networking.Models.Enums;
+using Framework.Networking.HTTPComponents;
+using HttpStatusCode = Framework.Networking.HTTPComponents.Enums.HttpStatusCode;
+using System;
 
 namespace Framework.Networking.Controller;
 
@@ -24,17 +24,29 @@ class ServerController
 
         Console.Write(" OK!\n");
     }
+    ~ServerController()
+    {
+        Console.Write("Server shutting down\r\n");
+    }
 
-    public async Task Listen()
+    public void Listen()
     {
         _tcpListener.Start();
 
         while (_isRunning)
         {
             Console.WriteLine("listening...");
-            TcpClient tcpClient = await _tcpListener.AcceptTcpClientAsync();
+            
+            TcpClient tcpClient = _tcpListener.AcceptTcpClient();
+            
             Console.WriteLine("connected");
-            HandleConnection(tcpClient);
+            
+            if(HandleConnection(tcpClient.GetStream()) == -1)
+            {
+                Console.WriteLine("ERROR!");
+            }
+
+            tcpClient.Close();
         }
     }
 
@@ -43,51 +55,72 @@ class ServerController
         _tcpListener.Stop();
     }
 
-    public void HandleConnection(TcpClient client)
+    public int HandleConnection(NetworkStream nwStream)
     {
-        var stream = client.GetStream();
-
-        if (stream.DataAvailable)
+        // get stream
+        if (nwStream.DataAvailable)
         {
-            // get stream
-            var nwStream = client.GetStream();
-
             // create buffer for receiving and sending bytes
             byte[] buffer = new byte[1024];
 
             // read from stream and get data
             int bytesRead = nwStream.Read(buffer, 0, 1024);
-            string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            try
+            {
+                var req = new HttpRequest(buffer, bytesRead);
+                Console.Write(req.ToString());
+            }
+            catch (ArgumentException)
+            {
+                // try sending Bad Request
+                bool success = TryAbortConnection(nwStream, HttpStatusCode.BadRequest);
 
-            Console.Write(data);
-            var req = new HttpRequest(data);
+                if (!success)
+                    throw;
+            }
+            catch (NotSupportedException)
+            {
+                // try sending Bad Request
+                bool success = TryAbortConnection(nwStream, HttpStatusCode.HTTPVersionNotSupported);
 
-            Console.Write(req);
-            Thread.Sleep(500);
-            // convert data into beautiful dict
+                if (!success)
+                    throw;
+            }
+            catch (Exception)
+            {
+                // try sending Bad Request
+                bool success = TryAbortConnection(nwStream, HttpStatusCode.InternalServerError);
+
+                if (!success)
+                {
+                    return -1;
+                }
+            }
 
             // Check for valid session and add token to response 
             var res = new HttpResponse();
-            res.SetStatusCode(Framework.Networking.Models.Enums.HttpStatusCode.OK);
+            res.SetStatusCode(HttpStatusCode.OK);
 
             var resBody = new Dictionary<string, dynamic>();
 
             //Session? session = CheckSession(req);
-            //res.Add("token", session.Token);
+            //res.Add("token", session.Token;
 
+            // convert to sendable data
+            // var json = JsonConvert.SerializeObject(res);
 
             // clear buffer
             Array.Clear(buffer, 0, 1024);
+            buffer = res.ToBytes();
 
-            // convert to sendable data
-            //var json = JsonConvert.SerializeObject(res);
-            buffer = Encoding.UTF8.GetBytes(res.ToString());
-
+            Console.Write(res.ToString());
             // write to stream
             nwStream.Write(buffer, 0, buffer.Length);
             nwStream.Close();
-
         }
+
+        return 1;
+
     }
 
     private Session CheckSession(Dictionary<string, dynamic> json)
@@ -100,6 +133,22 @@ class ServerController
 
         _sessions.Add(token, session);
         return session;
+    }
+
+    public bool TryAbortConnection(NetworkStream stream, HttpStatusCode statusCode)
+    {
+        // create response
+        var res = new HttpResponse();
+        res.SetStatusCode(statusCode);
+
+        // convert res to bytes
+        byte[] buffer = res.ToBytes();
+        stream.Write(buffer, 0, buffer.Length);
+        
+        // close stream
+        stream.Close();
+
+        return true;
     }
 
     private int LogOn(Session session, string username, string password)

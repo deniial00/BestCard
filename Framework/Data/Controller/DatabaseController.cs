@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Npgsql;
 
-namespace Framework.Controller;
+namespace Framework.Data.Controller;
 
 class DatabaseController
 {
