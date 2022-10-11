@@ -30,3 +30,15 @@
 - Decided to implement Routes in RoutingController (Route.cs missing)
 
 - Approx. 10h
+
+### 12.10.2022: Finally working httpServer
+- restructure whole project 
+	- now logic is called Framework
+	- Networking is now sub of Framework
+	- Card Logic now in Framework under Battle
+	- Added Data for Database access/models
+- fixed all bugs of HttpMessage Components
+- added ToString() to Messages for sending
+- working now with postman!
+
+- Approx. 3h
