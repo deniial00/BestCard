@@ -1,4 +1,4 @@
-# HERZSTEINE
+# BestCard
 
 ## Protocol
 
