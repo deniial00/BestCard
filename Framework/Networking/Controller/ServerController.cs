@@ -35,13 +35,13 @@ class ServerController
 
         while (_isRunning)
         {
-            Console.WriteLine("listening...");
+            Console.Write("listening...");
             
             TcpClient tcpClient = _tcpListener.AcceptTcpClient();
+            var tcpStream = tcpClient.GetStream();
+            Console.Write("connected\r\n\r\n");
             
-            Console.WriteLine("connected");
-            
-            if(HandleConnection(tcpClient.GetStream()) == -1)
+            if(HandleConnection(tcpStream) < 1)
             {
                 Console.WriteLine("ERROR!");
             }
@@ -57,67 +57,63 @@ class ServerController
 
     public int HandleConnection(NetworkStream nwStream)
     {
-        // get stream
-        if (nwStream.DataAvailable)
+        // create buffer for receiving and sending bytes
+        byte[] buffer = new byte[1024];
+
+        // read from stream and get data
+        int bytesRead = nwStream.Read(buffer, 0, 1024);
+        try
         {
-            // create buffer for receiving and sending bytes
-            byte[] buffer = new byte[1024];
-
-            // read from stream and get data
-            int bytesRead = nwStream.Read(buffer, 0, 1024);
-            try
-            {
-                var req = new HttpRequest(buffer, bytesRead);
-                Console.Write(req.ToString());
-            }
-            catch (ArgumentException)
-            {
-                // try sending Bad Request
-                bool success = TryAbortConnection(nwStream, HttpStatusCode.BadRequest);
-
-                if (!success)
-                    throw;
-            }
-            catch (NotSupportedException)
-            {
-                // try sending Bad Request
-                bool success = TryAbortConnection(nwStream, HttpStatusCode.HTTPVersionNotSupported);
-
-                if (!success)
-                    throw;
-            }
-            catch (Exception)
-            {
-                // try sending Bad Request
-                bool success = TryAbortConnection(nwStream, HttpStatusCode.InternalServerError);
-
-                if (!success)
-                {
-                    return -1;
-                }
-            }
-
-            // Check for valid session and add token to response 
-            var res = new HttpResponse();
-            res.SetStatusCode(HttpStatusCode.OK);
-
-            var resBody = new Dictionary<string, dynamic>();
-
-            //Session? session = CheckSession(req);
-            //res.Add("token", session.Token;
-
-            // convert to sendable data
-            // var json = JsonConvert.SerializeObject(res);
-
-            // clear buffer
-            Array.Clear(buffer, 0, 1024);
-            buffer = res.ToBytes();
-
-            Console.Write(res.ToString());
-            // write to stream
-            nwStream.Write(buffer, 0, buffer.Length);
-            nwStream.Close();
+            var req = new HttpRequest(buffer, bytesRead);
+            Console.Write(req.ToString());
         }
+        catch (ArgumentException)
+        {
+            // try sending Bad Request
+            bool success = TryAbortConnection(nwStream, HttpStatusCode.BadRequest);
+
+            if (!success)
+                throw;
+        }
+        catch (NotSupportedException)
+        {
+            // try sending Bad Request
+            bool success = TryAbortConnection(nwStream, HttpStatusCode.HTTPVersionNotSupported);
+
+            if (!success)
+                throw;
+        }
+        catch (Exception)
+        {
+            // try sending Bad Request
+            bool success = TryAbortConnection(nwStream, HttpStatusCode.InternalServerError);
+
+            if (!success)
+            {
+                return -1;
+            }
+        }
+
+        // Check for valid session and add token to response 
+        var res = new HttpResponse();
+        res.SetStatusCode(HttpStatusCode.OK);
+
+        var resBody = new Dictionary<string, dynamic>();
+
+        //Session? session = CheckSession(req);
+        //res.Add("token", session.Token;
+
+        // convert to sendable data
+        // var json = JsonConvert.SerializeObject(res);
+
+        // clear buffer
+        Array.Clear(buffer, 0, 1024);
+        buffer = res.ToBytes();
+
+        Console.Write(res.ToString());
+        // write to stream
+        nwStream.Write(buffer, 0, buffer.Length);
+        nwStream.Close();
 
         return 1;
 
