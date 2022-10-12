@@ -4,8 +4,8 @@ using Newtonsoft.Json;
 using System.Net;
 using Framework.Networking.Models;
 using Framework.Networking.HTTPComponents;
+using Framework.Networking.HTTPComponents.Enums;
 using HttpStatusCode = Framework.Networking.HTTPComponents.Enums.HttpStatusCode;
-using System;
 
 namespace Framework.Networking.Controller;
 
@@ -13,14 +13,18 @@ class ServerController
 {
     private TcpListener _tcpListener;
     private bool _isRunning;
-    private Dictionary<string, Session> _sessions;
+
+    private Dictionary<string, Session> Sessions { get; set; }
+
+    private Dictionary<string, Route> Routes { get; set; }
+
     public ServerController(int port = 1001)
     {
         Console.Write("Server starting ...");
 
-        _tcpListener = new TcpListener(IPAddress.Any, port);
-        _sessions = new Dictionary<string, Session>();
         _isRunning = true;
+        _tcpListener = new TcpListener(IPAddress.Loopback, port);
+        Sessions = new Dictionary<string, Session>();
 
         Console.Write(" OK!\n");
     }
@@ -29,7 +33,7 @@ class ServerController
         Console.Write("Server shutting down\r\n");
     }
 
-    public void Listen()
+    public void Start()
     {
         _tcpListener.Start();
 
@@ -121,13 +125,13 @@ class ServerController
 
     private Session CheckSession(Dictionary<string, dynamic> json)
     {
-        if (json.ContainsKey("token") && _sessions.ContainsKey(json["token"]))
-            return _sessions[json["token"]];
+        if (json.ContainsKey("token") && Sessions.ContainsKey(json["token"]))
+            return Sessions[json["token"]];
 
         string token = GenerateToken64();
         var session = new Session(token);
 
-        _sessions.Add(token, session);
+        Sessions.Add(token, session);
         return session;
     }
 
@@ -147,15 +151,10 @@ class ServerController
         return true;
     }
 
-    private int LogOn(Session session, string username, string password)
+    public void AddRoute(string route, HttpMethodType type, Func<HttpRequest, HttpResponse> func)
     {
-        if (username != "deniial" && password != "123456")
-        {
-            return -1;
-        }
-
-        session.IsLoggedIn = true;
-        return 1;
+        var routeNode = new Route(route, type, func);
+        Routes.Add(route, routeNode);
     }
 
     private string GenerateToken64()
