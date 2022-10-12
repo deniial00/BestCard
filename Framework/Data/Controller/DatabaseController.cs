@@ -21,7 +21,7 @@ class DatabaseController
 
         _databaseConnection = new NpgsqlConnection(connString);
         _databaseConnection.Open();
-        //if()
+        
     }
 
     public static DatabaseController GetInstance()
