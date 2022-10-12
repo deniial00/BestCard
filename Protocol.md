@@ -37,8 +37,11 @@
 	- Networking is now sub of Framework
 	- Card Logic now in Framework under Battle
 	- Added Data for Database access/models
+	- Added HTTPComponents for structure
 - fixed all bugs of HttpMessage Components
 - added ToString() to Messages for sending
 - working now with postman!
+- started adding routes
+- a lot of refactoring
 
-- Approx. 3h
+- Approx. 5h
