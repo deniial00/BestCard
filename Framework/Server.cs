@@ -13,7 +13,7 @@ using Framework.Networking.HTTPComponents;
 try
 {
     var server = new ServerController();
-    server.Listen();
+    server.Start();
 }
 catch (Exception ex)
 {
