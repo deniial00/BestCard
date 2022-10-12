@@ -2,6 +2,7 @@
 using Framework.Networking.Models;
 using Framework.Networking;
 using Framework.Networking.HTTPComponents;
+using Framework.Networking.HTTPComponents.Enums;
 
 //string data = "HTTP/1.1 200 OK\r\nDate: Sun, 18 Oct 2009 08:56:53 GMT\r\nServer: Apache/2.2.14 (Win32)\r\nLast-Modified: Sat, 20 Nov 2004 07:16:26 GMT\r\nETag: \"10000000565a5-2c-3e94b66c2e680\"\r\nAccept-Ranges: bytes\r\nContent-Length: 44\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n\r\n";
 
@@ -14,6 +15,16 @@ try
 {
     var server = new ServerController();
     server.Start();
+
+    // route 1
+    //var req = new HttpRequest("bla");
+    //server.AddRoute("/user", HttpMethodType.GET, (req) =>
+    //{
+    //    return new HttpResponse();
+    //});
+    // route 2
+
+
 }
 catch (Exception ex)
 {
