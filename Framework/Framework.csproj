@@ -10,8 +10,16 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Npgsql" Version="6.0.7" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Data\Models\" />
+    <None Remove="NUnit" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\Models\" />
+  </ItemGroup>
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

@@ -1,43 +1,89 @@
 ﻿using System.Text.Json;
+using Framework.Data.Models;
 using Npgsql;
 
 namespace Framework.Data.Controller;
 
-class DatabaseController
+public class DatabaseController
 {
-    private readonly string _databaseUser = "postgres";
-    private readonly string _databasePassword = "postgres";
-    private readonly string _databaseHost = "localhost";
-    private readonly string _databaseDatabase = "postgres";
-    private readonly string _databasePort = "5432";
+    private readonly string DatabseUser = "docker";
+    private readonly string DatabasePassword = "docker";
+    private readonly string DatabaseHost = "localhost";
+    private readonly string DatabaseDatabase = "BestCard";
+    private readonly string DatabasePort = "5432";
 
 
-    private static DatabaseController? _databaseController;
-    private NpgsqlConnection _databaseConnection;
+    private static DatabaseController? Instance;
+    private readonly NpgsqlConnection Connection;
 
     private DatabaseController()
     {
-        var connString = $"Host={_databaseHost};Port={_databasePort};Username={_databaseUser};Password={_databasePassword};Database={_databaseDatabase}";
-
-        _databaseConnection = new NpgsqlConnection(connString);
-        _databaseConnection.Open();
         
+        var connString = $"Host={DatabaseHost};Port={DatabasePort};Username={DatabseUser};Password={DatabasePassword};Database={DatabaseDatabase}";
+        try
+        {
+            Connection = new NpgsqlConnection(connString);
+            Connection.Open();
+            if (Connection == null || Connection.State == System.Data.ConnectionState.Closed)
+                throw new Exception();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Acces to database failed with error: {ex.Message}");
+        }
+
+        
+
+        Console.WriteLine("Access to database");
     }
 
     public static DatabaseController GetInstance()
     {
-        if (_databaseController == null)
-            _databaseController = new DatabaseController();
+        if (Instance == null)
+            Instance = new DatabaseController();
 
-        return _databaseController;
+        return Instance;
     }
 
-    public NpgsqlDataReader? Query(string query)
+    public NpgsqlConnection GetConnection()
     {
-        using var cmd = new NpgsqlCommand(query, _databaseConnection);
+        return Connection;
+    }
 
-        var reader = cmd.ExecuteReader();
+    // TODO: Commit() und Rollback muss natürlich ausserhalb der query passieren => out keyword?
+    public (int, NpgsqlTransaction) ExecuteNonReadQuery(string query, List<NpgsqlParameter> parameterList)
+    {
+        var tran = Connection.BeginTransaction();
+        int affectedRows = 0;
+        try
+        {
+            var command = new NpgsqlCommand(query, Connection, tran);
+            
+            command.Parameters.AddRange(parameterList.ToArray());
 
-        return reader;
+            affectedRows = command.ExecuteNonQuery();
+
+            //tran.Commit();
+        }
+        catch (Exception ex)
+        {
+            Console.Write($"Error at Executing query:\n{query}");
+            Console.WriteLine($"ERROR MESSAGE: {ex.Message}");
+            Console.WriteLine("Paramter:");
+
+            foreach(var param in parameterList)
+            {
+                Console.WriteLine($"{param.ParameterName}: {param.Value}");
+            }
+            //tran.Rollback();
+            throw new NpgsqlException("Query failed", ex);
+        }
+
+        return (affectedRows, tran);
+    }
+
+    public int LogMessage()
+    {
+        return 0;
     }
 }

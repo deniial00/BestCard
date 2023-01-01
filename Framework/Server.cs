@@ -1,32 +1,113 @@
-﻿using Framework.Networking.Controller;
+﻿using System.Net;
+using Framework.Data.Controller;
+using Framework.Data.Models;
+using Framework.Networking.Controller;
 using Framework.Networking.Models;
-using Framework.Networking;
-using Framework.Networking.HTTPComponents;
-using Framework.Networking.HTTPComponents.Enums;
-
-//string data = "HTTP/1.1 200 OK\r\nDate: Sun, 18 Oct 2009 08:56:53 GMT\r\nServer: Apache/2.2.14 (Win32)\r\nLast-Modified: Sat, 20 Nov 2004 07:16:26 GMT\r\nETag: \"10000000565a5-2c-3e94b66c2e680\"\r\nAccept-Ranges: bytes\r\nContent-Length: 44\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n\r\n";
-
-//HttpResponse res = new(data);
-
-//if (res != null)
-//    Console.WriteLine(res.ToBytes());
 
 try
 {
     var server = new ServerController();
-    server.Start();
 
-    // route 1
-    //var req = new HttpRequest("bla");
-    //server.AddRoute("/user", HttpMethodType.GET, (req) =>
+    // Create User
+    server.AddRoute("/users", HttpMethod.Post, true, async (req, res) =>
+    {
+        UserCredentials cred;
+        try
+        {
+            cred = server.RequestToObject<UserCredentials>(req);
+
+            if (cred is null)
+                throw new Exception("Could not parse json");
+
+            //cred.Password = UserService.HashPassword(cred.Password);
+            UserService.GetInstance().CreateUser(cred);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Coult not create user: {ex.Message}");
+            await server.SendResponseAsync(res, 500, $"User not created: {ex.Message}");
+            return;
+        }
+
+        await server.SendResponseAsync(res, 201, $"User {cred.Username} created");
+    });
+
+    // low priority
+    //server.AddRoute("/users/*", HttpMethod.Get, true, (HttpListenerRequest req, HttpListenerResponse res) =>
     //{
-    //    return new HttpResponse();
-    //});
-    // route 2
+    //    try
+    //    {
 
+    //    }
+    //    catch(Exception ex)
+    //    {
+    //        Console.WriteLine($"Coult not create User with message: {ex.Message}");
+    //        server.SendResponse(res, 500, $"User not created: {ex.Message}");
+    //        return;
+    //    }
+
+    //    server.SendResponse(res, 201, "User created");
+    //});
+
+    // Login User
+    server.AddRoute("/sessions", HttpMethod.Post, false, async (req, res) =>
+    {
+        UserCredentials cred = new();
+        Session session = new();
+        try
+        {
+            // get token from headers
+            var tokenHeader = req.Headers.Get("Authorization");
+            string token = "";
+            if (tokenHeader is not null && tokenHeader.Contains('-'))
+                token = tokenHeader.Substring(tokenHeader.LastIndexOf('-') + 1);
+
+            // check if token already has a session
+            cred = server.RequestToObject<UserCredentials>(req);
+            session = server.CheckSession(cred, token);
+
+            if (session.IsLoggedIn)
+                throw new ArgumentException("User already logged in");
+
+            session.IsLoggedIn = UserService.GetInstance().AuthenticateUser(cred);
+
+            if (!session.IsLoggedIn)
+                throw new InvalidOperationException("Invalid Credentials");
+
+            // set cookie
+            res.Cookies.Add(new Cookie("Authorization", $"Basic {cred.Username}-{session.Token}"));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not authenticate user: {ex.Message}");
+            await server.SendResponseAsync(res, 401, $"User could not be authenticated: {ex.Message}");
+            return;
+        }
+
+        await server.SendResponseAsync(res, 200, $"User {cred.Username} authenticated");
+    });
+
+    //// Create Package
+    //server.AddRoute("/packages", HttpMethod.Get, (req, res) =>
+    //{
+    //    // check auth
+    //    dynamic json = ServerController.RequestToJson(req);
+
+    //});
+
+    //// Buy Package
+    //server.AddRoute("/transactions", HttpMethod.Get, (req, res) =>
+    //{
+    //    // check auth
+
+
+    //});
+
+    await server.HandleRequestsAsync();
 
 }
 catch (Exception ex)
 {
     Console.WriteLine(ex);
 }
+

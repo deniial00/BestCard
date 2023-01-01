@@ -17,6 +17,12 @@ namespace Framework.Battle.Models.Cards
         Monster
     }
 
+    public enum MonsterType
+    {
+
+    }
+
+
     public interface ICard
     {
         CardType CardType { get; }

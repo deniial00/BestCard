@@ -45,3 +45,19 @@
 - a lot of refactoring
 
 - Approx. 5h
+
+### 17.12.2022: Docker DB Setup
+- pg_Container and pgAdmin4
+- web Interface to connect to localhost:5050
+- finally docker user has permissions 
+  - init.sql creates User and sets Grants
+- Access via CShap!
+
+- Approx. 8h
+
+### 19.12.2022: Server Refinements and DBAccess cleanup
+- Func for Non-Read queries to reduce duplicate code
+- Created User class
+- Set up /Users endpoint 
+
+- Approx. 5h
