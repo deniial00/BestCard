@@ -83,7 +83,6 @@ public class UserService
 
         if (count is not null && (Int64) count > 0)
             return true;
-
         return false;
     }
 
@@ -97,9 +96,11 @@ public class UserService
 
         var password = (string) getHashedPasswordCmd.ExecuteScalar();
 
-        if (password is not null && password == cred.Password)
+        if (password is not null && password.Trim() == cred.Password)
             return true;
 
+        // 	Password	"bd3dae5fb91f88a4f0978222dfd58f59a124257cb081486387cbae9df11fb879"	string
+        // 	password	password	"bd3dae5fb91f88a4f0978222dfd58f59a124257cb081486387cbae9df11fb879                                                                                                                                                                                                         
         return false;
     }
 

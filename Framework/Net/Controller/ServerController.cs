@@ -188,7 +188,12 @@ class ServerController : IDisposable
 
         Session session;
 
-        if(token == "Authorization: Basic admin-mtcgToken")
+        if (token == "Authorization: Basic admin-mtcgToken")
+        {
+            session = Session.AdminUserSession();
+            Console.WriteLine("Creating Admin Session");
+            return session;
+        }
 
         if (token != "")
         {
@@ -200,6 +205,7 @@ class ServerController : IDisposable
                     InvalidateSession(session);
                     throw new Exception("Session no longer valid");
                 }
+
                 // if valid then set LastAction
                 session.LastAction = DateTime.Now;
                 return session;
@@ -207,7 +213,7 @@ class ServerController : IDisposable
             {
                 token = UserService.GenerateToken64();
             }
-        }
+        } else { token = UserService.GenerateToken64();}
 
         session = new Session(token);
 

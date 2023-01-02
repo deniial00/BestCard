@@ -18,14 +18,14 @@ public class DatabaseController
 
     private DatabaseController()
     {
-        
+        Console.Write("Acessing database ... ");
         var connString = $"Host={DatabaseHost};Port={DatabasePort};Username={DatabseUser};Password={DatabasePassword};Database={DatabaseDatabase}";
         try
         {
             Connection = new NpgsqlConnection(connString);
             Connection.Open();
             if (Connection == null || Connection.State == System.Data.ConnectionState.Closed)
-                throw new Exception();
+                throw new NpgsqlException("Error could not create connection");
         }
         catch(Exception ex)
         {
@@ -34,7 +34,7 @@ public class DatabaseController
 
         
 
-        Console.WriteLine("Access to database");
+        Console.Write("OK!\n");
     }
 
     public static DatabaseController GetInstance()
@@ -50,7 +50,6 @@ public class DatabaseController
         return Connection;
     }
 
-    // TODO: Commit() und Rollback muss natürlich ausserhalb der query passieren => out keyword?
     public (int, NpgsqlTransaction) ExecuteNonReadQuery(string query, List<NpgsqlParameter> parameterList)
     {
         var tran = Connection.BeginTransaction();

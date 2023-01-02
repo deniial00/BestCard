@@ -7,6 +7,7 @@ using Framework.Networking.Models;
 try
 {
     var server = new ServerController();
+    var db = DatabaseController.GetInstance();
 
     // Create User
     server.AddRoute("/users", HttpMethod.Post, true, async (req, res) =>
