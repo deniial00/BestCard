@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Framework.Data.Controller;
 using Framework.Data.Models;
-using Framework.Networking.Controller;
-using Framework.Networking.Models;
+using Framework.Net.Controller;
+using Framework.Net.Models;
 
 try
 {
@@ -12,25 +12,25 @@ try
     // Create User
     server.AddRoute("/users", HttpMethod.Post, true, async (req, res) =>
     {
-        UserCredentials cred;
         try
         {
-            cred = server.RequestToObject<UserCredentials>(req);
+            UserCredentialModel cred = server.RequestToObject<UserCredentialModel>(req.InputStream);
 
             if (cred is null)
                 throw new Exception("Could not parse json");
 
             //cred.Password = UserService.HashPassword(cred.Password);
             UserService.GetInstance().CreateUser(cred);
+            await server.SendResponseAsync(res, 201, $"User {cred.Username} created");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Coult not create user: {ex.Message}");
-            await server.SendResponseAsync(res, 500, $"User not created: {ex.Message}");
-            return;
+
+            int statusCode = ex.Message.CompareTo("User already exists") == 0 ? 409 : 500;
+            await server.SendResponseAsync(res, statusCode, $"User not created: {ex.Message}");
         }
 
-        await server.SendResponseAsync(res, 201, $"User {cred.Username} created");
     });
 
     // low priority
@@ -53,56 +53,71 @@ try
     // Login User
     server.AddRoute("/sessions", HttpMethod.Post, false, async (req, res) =>
     {
-        UserCredentials cred = new();
-        Session session = new();
         try
         {
-            // get token from headers
-            var tokenHeader = req.Headers.Get("Authorization");
-            string token = "";
-            if (tokenHeader is not null && tokenHeader.Contains('-'))
-                token = tokenHeader.Substring(tokenHeader.LastIndexOf('-') + 1);
-
             // check if token already has a session
-            cred = server.RequestToObject<UserCredentials>(req);
-            session = server.CheckSession(cred, token);
+            var session = server.CheckSession(req);
+            var cred = server.RequestToObject<UserCredentialModel>(req.InputStream);
+
+            if (session is null)
+                session = server.CreateSession(cred, res);
 
             if (session.IsLoggedIn)
                 throw new ArgumentException("User already logged in");
+            else 
+                session.IsLoggedIn = UserService.GetInstance().AuthenticateUser(cred);
 
-            session.IsLoggedIn = UserService.GetInstance().AuthenticateUser(cred);
-
+            // still not logged in? Invalid cred!
             if (!session.IsLoggedIn)
                 throw new InvalidOperationException("Invalid Credentials");
+            
 
-            // set cookie
-            res.Cookies.Add(new Cookie("Authorization", $"Basic {cred.Username}-{session.Token}"));
+            await server.SendResponseAsync(res, 200, $"{{ \"Message\": \"User\" {cred.Username} authenticated,\"Token\" :"+session.Token+"}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Could not authenticate user: {ex.Message}");
-            await server.SendResponseAsync(res, 401, $"User could not be authenticated: {ex.Message}");
-            return;
+            await server.SendResponseAsync(res, 400, $"User could not be authenticated: {ex.Message}");
         }
 
-        await server.SendResponseAsync(res, 200, $"User {cred.Username} authenticated");
     });
 
     //// Create Package
-    //server.AddRoute("/packages", HttpMethod.Get, (req, res) =>
-    //{
-    //    // check auth
-    //    dynamic json = ServerController.RequestToJson(req);
+    server.AddRoute("/packages", HttpMethod.Get, true, async (req, res) =>
+    {
+        try
+        {
+            CardModel[] cards = server.RequestToObject<CardModel[]>(req.InputStream);
 
-    //});
+            bool success = CardService.AddPackage(cards);
 
-    //// Buy Package
-    //server.AddRoute("/transactions", HttpMethod.Get, (req, res) =>
-    //{
-    //    // check auth
+            if (success)
+                await server.SendResponseAsync(res, 200, $"{{ \"Message\": \"Package created\"}}");
 
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"Could not create Package: {ex.Message}");
+            await server.SendResponseAsync(res, 400, $"Package not created: {ex.Message}");
+        }
 
-    //});
+    });
+
+    // Buy Package
+    server.AddRoute("/transactions/packages", HttpMethod.Get, true, (req, res) =>
+    {
+        try
+        {
+            var session = server.GetSession(server.GetTokenOfRequest(req));
+            if (session is null)
+                throw new UserNotLoggedInException();
+
+            bool success = CardService.AcquirePackage((int) session.UserID);
+        }
+        catch (Exception ex)
+        {
+
+        }
+    });
 
     await server.HandleRequestsAsync();
 

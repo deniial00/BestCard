@@ -24,8 +24,10 @@ public class DatabaseController
         {
             Connection = new NpgsqlConnection(connString);
             Connection.Open();
-            if (Connection == null || Connection.State == System.Data.ConnectionState.Closed)
+
+            if(!CheckConnection())
                 throw new NpgsqlException("Error could not create connection");
+            
         }
         catch(Exception ex)
         {
@@ -48,6 +50,14 @@ public class DatabaseController
     public NpgsqlConnection GetConnection()
     {
         return Connection;
+    }
+
+    public bool CheckConnection()
+    {
+        if (Connection == null || Connection.State == System.Data.ConnectionState.Closed)
+            return false;
+        else
+            return true;
     }
 
     public (int, NpgsqlTransaction) ExecuteNonReadQuery(string query, List<NpgsqlParameter> parameterList)

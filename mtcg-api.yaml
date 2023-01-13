@@ -3,6 +3,7 @@ info:
   title: Monster Trading Cards Game
   description: |-
     This is the specification of the required API endpoints for the MTCG server.
+  version: 1.0
 servers:
   - url: http://localhost:10001
 tags:

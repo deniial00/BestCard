@@ -1,8 +1,8 @@
 ﻿using System.Net;
 
-namespace Framework.Networking.Models;
+namespace Framework.Net.Models;
 
-class Route
+public class Route
 {
     public HttpMethod MethodType { get; set; }
 

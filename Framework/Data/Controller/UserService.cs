@@ -1,7 +1,8 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using Framework.Data.Models;
 using Npgsql;
+
+using Framework.Data.Models;
 
 namespace Framework.Data.Controller;
 
@@ -23,7 +24,7 @@ public class UserService
 		return Instance;
 	}
 
-    public int CreateUser(UserCredentials credentials)
+    public int CreateUser(UserCredentialModel credentials)
     {
         var db = DatabaseController.GetInstance();
         var paramList = new List<NpgsqlParameter>();
@@ -86,8 +87,12 @@ public class UserService
         return false;
     }
 
-    public bool AuthenticateUser(UserCredentials cred)
+    public bool AuthenticateUser(UserCredentialModel cred, string token = "")
     {
+        // if admin user
+        if (token == "Basic admin-mtcgToken")
+            return true;
+
         var db = DatabaseController.GetInstance();
 
         string getHashedPasswordQuery = "SELECT password_hash FROM bestcard.users WHERE username = @Username;";
@@ -99,8 +104,6 @@ public class UserService
         if (password is not null && password.Trim() == cred.Password)
             return true;
 
-        // 	Password	"bd3dae5fb91f88a4f0978222dfd58f59a124257cb081486387cbae9df11fb879"	string
-        // 	password	password	"bd3dae5fb91f88a4f0978222dfd58f59a124257cb081486387cbae9df11fb879                                                                                                                                                                                                         
         return false;
     }
 

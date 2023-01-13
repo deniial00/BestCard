@@ -2,12 +2,12 @@
 using System.Text;
 using Framework.Data.Controller;
 using Framework.Data.Models;
-using Framework.Networking.Models;
+using Framework.Net.Models;
 using Newtonsoft.Json;
 
-namespace Framework.Networking.Controller;
+namespace Framework.Net.Controller;
 
-class ServerController : IDisposable
+public class ServerController : IDisposable
 {
     private readonly int _maxThreadCount;
     private readonly HttpListener _listener;
@@ -42,6 +42,11 @@ class ServerController : IDisposable
         Routes = new Dictionary<string, Route>();
         Console.Write(" OK!\n");
     }
+
+    //public ServerController()
+    //{
+    //}
+
     public void Dispose()
     {
         Console.Write("Server shutting down\r\n");
@@ -86,7 +91,7 @@ class ServerController : IDisposable
 
             await Task.Run(async () =>
             {
-                Console.Write($"Connected with url: {context.Request.Url}\r\n");
+                Console.Write($"Connected with url: {context.Request.Url.LocalPath}\r\n");
 
                 var request = context.Request;
                 var response = context.Response;
@@ -94,6 +99,14 @@ class ServerController : IDisposable
 
                 if (route is null)
                     return;
+
+                // Execute Auth when required
+                if (route.RequireAuth)
+                {
+                    var session = CheckSession(request);
+                    if (session is null || !session.IsLoggedIn)
+                        throw new UserNotLoggedInException();
+                }
 
                 route.Execute(request, response);
 
@@ -183,41 +196,70 @@ class ServerController : IDisposable
         Routes.Add(route, routeNode);
     }
 
-    public Session CheckSession(UserCredentials cred, string token)
+    public string GetTokenOfRequest(HttpListenerRequest req)
     {
+        // get authtoken from headers
+        var tokenHeader = req.Headers.Get("Authorization");
+        string token = "";
 
-        Session session;
+        // Basic username-tokenBasic
+        if (tokenHeader is not null && tokenHeader.Contains('-'))
+            token = tokenHeader.Substring(("Basic").Length + 1);
 
-        if (token == "Authorization: Basic admin-mtcgToken")
+        return token;
+    }
+
+    public Session? CheckSession(HttpListenerRequest req)
+    {
+        string token = GetTokenOfRequest(req);
+
+        Session? session;
+
+
+        if (token is null || token == "")
+            return null;
+
+        if (Sessions.TryGetValue(token, out session))
+        {
+            // check if token is invalid
+            if (session.LastAction.AddHours(SessionLifetimeHours) > DateTime.Now)
+            {
+                InvalidateSession(session);
+                throw new Exception("Session no longer valid");
+            }
+
+            // if valid then set LastAction
+            session.LastAction = DateTime.Now;
+        }
+        
+
+        if (token.Substring(token.IndexOf("-") + 1) == "mtcgToken")
         {
             session = Session.AdminUserSession();
             Console.WriteLine("Creating Admin Session");
-            return session;
+            Sessions.Add(token, session);
         }
 
-        if (token != "")
-        {
-            if (Sessions.TryGetValue(token, out session))
-            {
-                // check if token is invalid
-                if (session.LastAction.AddHours(SessionLifetimeHours) > DateTime.Now)
-                {
-                    InvalidateSession(session);
-                    throw new Exception("Session no longer valid");
-                }
+        return session;
+    }
 
-                // if valid then set LastAction
-                session.LastAction = DateTime.Now;
-                return session;
-            } else
-            {
-                token = UserService.GenerateToken64();
-            }
-        } else { token = UserService.GenerateToken64();}
+    public Session? GetSession(string token)
+    {
+        Session session;
+        Sessions.TryGetValue(token, out session);
 
-        session = new Session(token);
+        return session;
+    }
 
+    public Session CreateSession(UserCredentialModel cred, HttpListenerResponse res)
+    {
+        string token = $"{cred.Username}-{UserService.GenerateToken64()}";
+        var session = new Session(cred, token);
+
+        // add to dic and add header
         Sessions.Add(token, session);
+        res.Cookies.Add(new Cookie("Authorization", $"Basic {token}"));
+
         return session;
     }
 
@@ -260,12 +302,12 @@ class ServerController : IDisposable
         response.Close();
     }
 
-    public T RequestToObject<T>(HttpListenerRequest req)
+    public T RequestToObject<T>(Stream inputStream)
     {
         string body;
         T obj;
 
-        using (Stream receiveStream = req.InputStream)
+        using (Stream receiveStream = inputStream)
         {
             using (StreamReader readStream = new StreamReader(receiveStream, Encoding.UTF8))
             {

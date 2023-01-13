@@ -1,13 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using Framework.Data.Models;
+using Newtonsoft.Json;
 using System.Net.Sockets;
 
-namespace Framework.Networking.Models;
+namespace Framework.Net.Models;
 
-class Session
+public class Session
 {
     public string Token;
 
     public int? UserID;
+
+    public string? UserName;
 
     public bool IsLoggedIn;
 
@@ -23,11 +26,19 @@ class Session
         LastAction = DateTime.Now;
     }
 
+    public Session(UserCredentialModel cred, string token)
+    {
+        Token = token;
+        UserName = cred.Username;
+        IsLoggedIn = false;
+        LastAction = DateTime.Now;
+    }
+
     public static Session AdminUserSession()
     {
         var sess = new Session();
         sess.UserID = 1;
-        sess.Token = "mtcgToken";
+        sess.Token = "Basic admin-mtcgToken";
         sess.IsLoggedIn = true;
         sess.LastAction = DateTime.Now;
         return sess;
