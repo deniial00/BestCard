@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Text;
 using Framework.Data.Controller;
 using Framework.Data.Models;
@@ -72,7 +73,7 @@ public class ServerController : IDisposable
             if (route is null)
                 continue;
 
-            route.Execute(request, response);
+            route.Execute(context);
 
             if(response is not null)
                 response.Close();
@@ -103,12 +104,15 @@ public class ServerController : IDisposable
                 // Execute Auth when required
                 if (route.RequireAuth)
                 {
-                    var session = CheckSession(request);
+                    var session = CheckSession(context);
                     if (session is null || !session.IsLoggedIn)
-                        throw new UserNotLoggedInException();
+                    {
+                        await SendResponseAsync(response, 401, $"{{ \"Error\": \"User not logged in\" }}");
+                        return;
+                    }
                 }
 
-                route.Execute(request, response);
+                route.Execute(context);
 
                 if (response is not null)
                     response.Close();
@@ -130,9 +134,10 @@ public class ServerController : IDisposable
         try
         {
             requestedEndpoint = ctx.Request.Url.LocalPath;
-            route = Routes[requestedEndpoint];
+            var requestMethod = ctx.Request.HttpMethod;
+            route = Routes[requestedEndpoint+requestMethod];
         }
-        catch (ArgumentNullException ex)
+        catch (ArgumentNullException)
         {
             string errorMsg = "Endpoint not provided";
 
@@ -142,7 +147,7 @@ public class ServerController : IDisposable
             Console.Write($"{errorMsg} \n");
             return null;
         }
-        catch (KeyNotFoundException ex)
+        catch (KeyNotFoundException)
         {
             string errorMsg = $"Endpoint {requestedEndpoint} is invalid";
 
@@ -160,15 +165,17 @@ public class ServerController : IDisposable
     private async Task<Route?> TryGetRouteAsync(HttpListenerContext ctx)
     {
         Route? route;
-        string requestedEndpoint = "";
+        string requestedEndpoint = "", requestMethod = "";
+
         try
         {
             requestedEndpoint = ctx.Request.Url.LocalPath;
-            route = Routes[requestedEndpoint];
+            requestMethod = ctx.Request.HttpMethod;
+            route = Routes[requestedEndpoint + "-" + requestMethod];
         }
-        catch (ArgumentNullException ex)
+        catch (ArgumentNullException)
         {
-            string errorMsg = "Endpoint not provided";
+            string errorMsg = $"{{ \"Error\": \"Endpoint not provided\" }}";
 
             await SendResponseAsync(ctx.Response, 404, errorMsg);
             ctx.Response.Close();
@@ -176,9 +183,9 @@ public class ServerController : IDisposable
             Console.Write($"{errorMsg} \n");
             return null;
         }
-        catch (KeyNotFoundException ex)
+        catch (KeyNotFoundException)
         {
-            string errorMsg = $"Endpoint {requestedEndpoint} is invalid";
+            string errorMsg = $"{{ \"Error\": \"Endpoint {requestedEndpoint} with method {requestMethod} is invalid\" }}";
 
             await SendResponseAsync(ctx.Response, 404, errorMsg);
             ctx.Response.Close();
@@ -190,10 +197,10 @@ public class ServerController : IDisposable
         return route;
     }
 
-    public void AddRoute(string route, HttpMethod type, bool authIsRequired, Action<HttpListenerRequest, HttpListenerResponse> func)
+    public void AddRoute(string route, string type, bool authIsRequired, Action<HttpListenerContext> func)
     {
         var routeNode = new Route(route, type, authIsRequired, func);
-        Routes.Add(route, routeNode);
+        Routes.Add(route + "-" + type, routeNode);
     }
 
     public string GetTokenOfRequest(HttpListenerRequest req)
@@ -209,12 +216,11 @@ public class ServerController : IDisposable
         return token;
     }
 
-    public Session? CheckSession(HttpListenerRequest req)
+    public Session CheckSession(HttpListenerContext ctx)
     {
-        string token = GetTokenOfRequest(req);
+        string token = GetTokenOfRequest(ctx.Request);
 
         Session? session;
-
 
         if (token is null || token == "")
             return null;
@@ -222,17 +228,18 @@ public class ServerController : IDisposable
         if (Sessions.TryGetValue(token, out session))
         {
             // check if token is invalid
-            if (session.LastAction.AddHours(SessionLifetimeHours) > DateTime.Now)
+            if (session.LastAction.AddHours(SessionLifetimeHours) < DateTime.Now)
             {
                 InvalidateSession(session);
-                throw new Exception("Session no longer valid");
+                throw new UserNotLoggedInException("Session no longer valid. Please login again.",ctx.Response);
             }
 
             // if valid then set LastAction
             session.LastAction = DateTime.Now;
-        }
+        } 
         
-
+        // TODO: Change to actually work only for admin token
+        // currently every auth header with "mtcgToken" is authenticated as admin
         if (token.Substring(token.IndexOf("-") + 1) == "mtcgToken")
         {
             session = Session.AdminUserSession();
@@ -240,18 +247,33 @@ public class ServerController : IDisposable
             Sessions.Add(token, session);
         }
 
+        // no active session
+        if (session is null)
+            throw new UserNotLoggedInException(ctx.Response);
+
         return session;
     }
 
     public Session? GetSession(string token)
     {
-        Session session;
+        Session? session;
         Sessions.TryGetValue(token, out session);
 
         return session;
     }
 
-    public Session CreateSession(UserCredentialModel cred, HttpListenerResponse res)
+    public Session GetSession(HttpListenerContext ctx)
+    {
+        string token = GetTokenOfRequest(ctx.Request);
+        Session? session = GetSession(token);
+
+        if (session is null)
+            throw new UserNotLoggedInException(ctx.Response);
+
+        return session;
+    }
+
+    public Session CreateSession(UserCredentials cred, HttpListenerResponse res)
     {
         string token = $"{cred.Username}-{UserService.GenerateToken64()}";
         var session = new Session(cred, token);
@@ -305,7 +327,7 @@ public class ServerController : IDisposable
     public T RequestToObject<T>(Stream inputStream)
     {
         string body;
-        T obj;
+        T? obj;
 
         using (Stream receiveStream = inputStream)
         {

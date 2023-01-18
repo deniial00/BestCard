@@ -26,7 +26,7 @@ public class Session
         LastAction = DateTime.Now;
     }
 
-    public Session(UserCredentialModel cred, string token)
+    public Session(UserCredentials cred, string token)
     {
         Token = token;
         UserName = cred.Username;
@@ -34,6 +34,7 @@ public class Session
         LastAction = DateTime.Now;
     }
 
+    // TODO: Rework admin user session
     public static Session AdminUserSession()
     {
         var sess = new Session();

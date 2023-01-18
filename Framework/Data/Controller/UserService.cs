@@ -2,82 +2,65 @@
 using System.Text;
 using Npgsql;
 
-using Framework.Data.Models;
+using Framework.Net.Models;
 
 namespace Framework.Data.Controller;
 
-public class UserService
+public static class UserService
 {
 
-	private static UserService? Instance;
-
-	private UserService()
-	{
-
-	}
-
-	public static UserService GetInstance()
-	{
-		if (Instance == null)
-			Instance = new UserService();
-
-		return Instance;
-	}
-
-    public int CreateUser(UserCredentialModel credentials)
+    public static int CreateUser(UserCredentials credentials)
     {
         var db = DatabaseController.GetInstance();
+        var connection = db.GetConnection();
         var paramList = new List<NpgsqlParameter>();
+        var tran = connection.BeginTransaction();
 
         // check if user already Exists
-        bool userExists = CheckUserExists(credentials.Username);
+        bool userExists = UserService.CheckUserExists(credentials.Username);
 
         if (userExists)
             throw new ArgumentException("User already exists");
 
-        string createUserQuery = @"INSERT INTO bestcard.users
-                       (
-                            ""username"",
-                            ""password_hash"",
-                            ""created_at""
-                       )
-                       VALUES
-                       (
-                            @Username,
-                            @Password,
-                            NOW()
-                       );";
+        string createUserQuery =
+            @"INSERT INTO bestcard.users
+            (
+                ""username"",
+                ""password_hash"",
+                ""created_at""
+            )
+            VALUES
+            (
+                @Username,
+                @Password,
+                NOW()
+            )
+            RETURNING id;";
 
         paramList.Add(new NpgsqlParameter("@Password", credentials.Password));
         paramList.Add(new NpgsqlParameter("@Username", credentials.Username));
+        paramList.Add(new NpgsqlParameter("@Username", credentials.Username));
 
+        var createUserCmd = new NpgsqlCommand(createUserQuery,connection, tran);
+        createUserCmd.Parameters.AddRange(paramList.ToArray());
 
-        (int rowCount, NpgsqlTransaction tran) = db.ExecuteNonReadQuery(createUserQuery, paramList);
+        var userID = createUserCmd.ExecuteScalar();
 
-        if (rowCount != 1)
+        if (userID is null || (int) userID < 1)
         {
             tran.Rollback();
             throw new Exception("Query failed");
         }
 
-        tran.Commit();
-
-        string selectUserIDQuery = "SELECT id FROM bestcard.users WHERE username = @Username";
-
-        var selectUserIDCmd = new NpgsqlCommand(selectUserIDQuery, db.GetConnection());
-        selectUserIDCmd.Parameters.Add(new NpgsqlParameter("@Username", credentials.Username));
-
-        Int32 userID = (Int32) selectUserIDCmd.ExecuteScalar();
-
         return (int) userID;
     }
 
-    public bool CheckUserExists(string username)
+    public static bool CheckUserExists(string username)
     {
-        var db = DatabaseController.GetInstance();
+        var connection = DatabaseController.GetInstance().GetConnection();
 
         string checkUserNameExistsQuery = "SELECT COUNT(*) as cnt FROM bestcard.users WHERE username = @Username;";
-        var checkUserCmd = new NpgsqlCommand(checkUserNameExistsQuery, db.GetConnection());
+        var checkUserCmd = new NpgsqlCommand(checkUserNameExistsQuery, connection);
         checkUserCmd.Parameters.Add(new NpgsqlParameter("@Username", username));
 
         var count = checkUserCmd.ExecuteScalar();
@@ -87,30 +70,31 @@ public class UserService
         return false;
     }
 
-    public bool AuthenticateUser(UserCredentialModel cred, string token = "")
+    // TODO: also check if admin user
+    public static bool AuthenticateUser(UserCredentials cred, string token = "")
     {
         // if admin user
         if (token == "Basic admin-mtcgToken")
             return true;
 
-        var db = DatabaseController.GetInstance();
+        var connection = DatabaseController.GetInstance().GetConnection();
 
         string getHashedPasswordQuery = "SELECT password_hash FROM bestcard.users WHERE username = @Username;";
-        var getHashedPasswordCmd = new NpgsqlCommand(getHashedPasswordQuery, db.GetConnection());
+        var getHashedPasswordCmd = new NpgsqlCommand(getHashedPasswordQuery, connection);
         getHashedPasswordCmd.Parameters.Add(new NpgsqlParameter("@Username", cred.Username));
 
-        var password = (string) getHashedPasswordCmd.ExecuteScalar();
+        var password = getHashedPasswordCmd.ExecuteScalar();
+        
+        if (password is not null)
+        {
+            string pass = (string) password;
 
-        if (password is not null && password.Trim() == cred.Password)
-            return true;
+            if(pass.Trim() == cred.Password)
+                return true;
+        }
 
         return false;
     }
-
-    //public User? GetUser()
-    //{
-
-    //}
 
     public static string HashPassword(string password)
     {

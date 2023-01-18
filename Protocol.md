@@ -91,3 +91,10 @@
   * AddPackage from Cards[ ]
   * AcquirePackage
 * Approx. 20h
+
+### 14.1.2023: New Routes
+
+* added GET cards
+* added GET deck
+* added PUT deck
+* started working on BattleService

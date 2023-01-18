@@ -60,15 +60,15 @@ public class DatabaseController
             return true;
     }
 
-    public (int, NpgsqlTransaction) ExecuteNonReadQuery(string query, List<NpgsqlParameter> parameterList)
+    public (int, NpgsqlTransaction) ExecuteNonReadQuery(string query, List<NpgsqlParameter>? parameterList)
     {
         var tran = Connection.BeginTransaction();
         int affectedRows = 0;
         try
         {
             var command = new NpgsqlCommand(query, Connection, tran);
-            
-            command.Parameters.AddRange(parameterList.ToArray());
+            if (parameterList is not null)
+                command.Parameters.AddRange(parameterList.ToArray());
 
             affectedRows = command.ExecuteNonQuery();
 
@@ -79,10 +79,12 @@ public class DatabaseController
             Console.Write($"Error at Executing query:\n{query}");
             Console.WriteLine($"ERROR MESSAGE: {ex.Message}");
             Console.WriteLine("Paramter:");
-
-            foreach(var param in parameterList)
+            if (parameterList is not null)
             {
-                Console.WriteLine($"{param.ParameterName}: {param.Value}");
+                foreach(var param in parameterList)
+                {
+                    Console.WriteLine($"{param.ParameterName}: {param.Value}");
+                }
             }
             //tran.Rollback();
             throw new NpgsqlException("Query failed", ex);

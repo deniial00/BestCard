@@ -1,9 +1,9 @@
 ﻿using Framework.Data.Controller;
 using Newtonsoft.Json;
 using System;
-namespace Framework.Data.Models;
+namespace Framework.Net.Models;
 
-public class UserCredentialModel
+public class UserCredentials
 {
     [JsonProperty("Username")]
     public string Username { get; set; }
@@ -11,14 +11,14 @@ public class UserCredentialModel
     [JsonProperty("Password")]
     public string Password { get; set; }
 
-    public UserCredentialModel()
+    public UserCredentials()
     {
         Username = "";
         Password = "";
     }
 
     [JsonConstructor]
-    public UserCredentialModel(string name, string password)
+    public UserCredentials(string name, string password)
     {
         Username = name;
         Password = UserService.HashPassword(password);

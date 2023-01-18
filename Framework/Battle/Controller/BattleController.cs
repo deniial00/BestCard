@@ -7,8 +7,28 @@ using Framework.Battle.Models.Cards;
 
 namespace Framework.Battle.Controller;
 
-class BattleController
+public class BattleController
 {
+    // TODO: currently storing userIds. Maybe store BattleEvent?
+    private List<int> Lobby;
+    private static BattleController? Instance;
+
+    public static BattleController GetInstance()
+    {
+        if (Instance is null)
+            Instance = new BattleController();
+
+        return Instance;
+    }
+
+    // TODO: IniateBattle
+    // get decks of users
+    // Calculate Result 100 times or until deck of user is empty
+    // always give card of loser to winner
+    // 100 battles => draw
+    
+
+
     public ICard? CalculateResult(ICard card1, ICard card2)
     {
         float card1DamageMultiplier = 1;

@@ -42,7 +42,7 @@ public class ServerTests
     [Test]
     public void CheckAdminUserSession()
     {
-        var cred = new UserCredentialModel("denial", "password");
+        var cred = new UserCredentials("denial", "password");
         var expectedSession = Session.AdminUserSession();
 
         Assert.That(expectedSession.Token, Is.EqualTo("Basic admin-mtcgToken"));
@@ -53,7 +53,7 @@ public class ServerTests
     [Test]
     public void RouteModelConstructorTest()
     {
-        var route = new Route("/test", HttpMethod.Get, true, (req, res) =>
+        var route = new Route("/test", "GET", true, (ctx) =>
         {
             
         });
@@ -79,7 +79,7 @@ public class ServerTests
     [Test]
     public void UserCredentialsModelConstructorTest()
     {
-        var cred = new UserCredentialModel("admin", "admin");
+        var cred = new UserCredentials("admin", "admin");
 
         if (cred is not null && cred.Username == "admin" && cred.Password != "admin")
             Assert.Pass();

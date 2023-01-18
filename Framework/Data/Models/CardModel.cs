@@ -13,9 +13,9 @@ public class CardModel
     [JsonProperty("Damage")]
 	public float CardDamage { get; set; }
 
-	public CardModel(string name, float damage)
+	public CardModel(string id, string name, float damage)
 	{
-		CardId = "asdasd";
+		CardId = id;
 		CardName = name;
 		CardDamage = damage;
 	}
