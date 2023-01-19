@@ -86,4 +86,19 @@ public class ServerTests
         else
             Assert.Fail();
     }
+
+    [Test]
+    public void AddPlayerToLobbyTest()
+    {
+        var battleController = BattleController.GetInstance();
+
+        int playerId = 1;
+        int returnVal = battleController.CreateBattleEvent(playerId);
+
+        if (returnVal == 1 && battleController.LobbyCount == 1)
+            Assert.Pass();
+        else
+            Assert.Fail();
+
+    }
 }

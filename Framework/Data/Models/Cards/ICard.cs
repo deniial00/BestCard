@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Framework.Battle.Models.Cards;
+namespace Framework.Data.Models.Cards;
 
 public enum CardElement
 {
@@ -23,7 +23,7 @@ public interface ICard
     string CardName { get; }
     CardElement CardElement { get; }
     CardElement? CardEffectiveAgainst { get; }
-    int CardAttack { get; }
+    float CardDamage { get; }
     float Attack(ICard enemyCard, float damageMultiplier);
     void GetInfo();
 

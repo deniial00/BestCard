@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Framework.Battle.Controller;
+using Framework.Data.Controller;
 using Framework.Data.Controller;
 using Framework.Data.Models;
 using Framework.Net.Controller;
@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 try
 {
     var server = new ServerController();
-    var battle = new BattleController();
+    var battleController = BattleController.GetInstance();
 
     var db = DatabaseController.GetInstance();
 
@@ -180,7 +180,22 @@ try
         {
             var session = server.GetSession(ctx);
 
+            var userId = session.UserID;
+
+            if (userId is null)
+                throw new UserNotLoggedInException();
+
+            var battle = battleController.AddPlayerToLobby((int) userId);
+
+            var perodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
             
+            while (await perodicTimer.WaitForNextTickAsync())
+            {
+                if (battle.ResultsAvailable)
+                {
+
+                }
+            }
 
         }
         catch (Exception ex)

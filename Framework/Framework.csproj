@@ -16,9 +16,11 @@
   <ItemGroup>
     <None Remove="Data\Models\" />
     <None Remove="NUnit" />
+    <None Remove="Data\Models\Cards\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\Models\" />
+    <Folder Include="Data\Models\Cards\" />
   </ItemGroup>
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 

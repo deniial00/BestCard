@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Framework.Battle.Models.Cards;
+using Framework.Data.Models.Cards;
 
-namespace Framework.Battle.Models.Cards.Spells
+namespace Framework.Data.Models.Cards.Spells
 {
     internal class BoltSpell : ICard
     {
@@ -17,14 +17,14 @@ namespace Framework.Battle.Models.Cards.Spells
 
         public CardElement? CardEffectiveAgainst { get; }
 
-        public int CardAttack { get; }
+        public float CardDamage { get; }
 
-        public BoltSpell(CardElement cardElement, int cardAttack, CardElement? cardEffectiveAgainst = null)
+        public BoltSpell(CardElement cardElement, float CardDamage, CardElement? cardEffectiveAgainst = null)
         {
             CardType = CardType.Spell;
             CardName = "Bolt";
             CardElement = cardElement;
-            CardAttack = cardAttack;
+            CardDamage = CardDamage;
             CardEffectiveAgainst = cardEffectiveAgainst;
         }
 
@@ -32,15 +32,15 @@ namespace Framework.Battle.Models.Cards.Spells
         {
             if (enemyCard.CardName == "Kraken")
             {
-                return enemyCard.CardAttack;
+                return enemyCard.CardDamage;
             }
-            return enemyCard.CardAttack - CardAttack * damageMultiplier;
+            return enemyCard.CardDamage - CardDamage * damageMultiplier;
             ;
         }
 
         public void GetInfo()
         {
-            Console.Write($"Name: {CardElement + " " + CardName + Environment.NewLine}Type: {CardType + Environment.NewLine}Element: {CardElement + Environment.NewLine}Damage: {CardAttack + Environment.NewLine}");
+            Console.Write($"Name: {CardElement + " " + CardName + Environment.NewLine}Type: {CardType + Environment.NewLine}Element: {CardElement + Environment.NewLine}Damage: {CardDamage + Environment.NewLine}");
         }
     }
 }

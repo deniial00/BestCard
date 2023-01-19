@@ -3,32 +3,34 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Framework.Data.Models.Cards;
 
-namespace Framework.Battle.Models.Cards.Monsters
+namespace Framework.Data.Models.Cards.Monsters
 {
-    class ElfMonster : ICard
+    class WizardMonster : ICard
     {
         public CardType CardType { get; }
 
         public string CardName { get; }
 
         public CardElement CardElement { get; }
+
         public CardElement? CardEffectiveAgainst { get; }
 
-        public int CardAttack { get; }
+        public float CardDamage { get; }
 
-        public ElfMonster(CardElement cardElement, int cardDamage, CardElement? cardEffectiveAgainst = null)
+        public WizardMonster(CardElement cardElement, float cardDamage, CardElement? cardEffectiveAgainst = null)
         {
             CardType = CardType.Monster;
-            CardName = "Elf";
+            CardName = "Wizard";
             CardElement = cardElement;
             CardEffectiveAgainst = cardEffectiveAgainst;
-            CardAttack = cardDamage;
+            CardDamage = cardDamage;
         }
 
         public float Attack(ICard enemyCard, float damageMultiplier)
         {
-            return enemyCard.CardAttack - CardAttack * damageMultiplier;
+            return enemyCard.CardAttack - CardDamage * damageMultiplier;
         }
 
         public void GetInfo()

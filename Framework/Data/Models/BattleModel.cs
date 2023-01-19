@@ -1,16 +1,23 @@
 ﻿using System;
-using Framework.Battle.Models.Cards;
-
-namespace Framework.Models;
+namespace Framework.Data.Models;
 
 public class BattleModel
 {
-	public ICard? CardChampion;
-	public ICard? CardChallenger;
+    public int BattleId;
+    public int ChampionUserId;
+    public int? ChallengerUserId;
 
-	public 
-	public BattleEvent()
+    public int? ChampionEloChange;
+    public int? ChallengerEloChange;
+
+    public DateTime BattleTimeStamp;
+
+    public bool ResultsAvailable;
+
+	public BattleModel(int userId)
 	{
+        ChampionUserId = userId;
+        ResultsAvailable = false;
 	}
 }
 
