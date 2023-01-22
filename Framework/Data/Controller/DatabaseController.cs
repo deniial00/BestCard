@@ -9,13 +9,6 @@ namespace Framework.Data.Controller;
 
 public class DatabaseController
 {
-    private readonly string DatabseUser = "docker";
-    private readonly string DatabasePassword = "docker";
-    private readonly string DatabaseHost = "localhost";
-    private readonly string DatabaseDatabase = "BestCard";
-    private readonly string DatabasePort = "5432";
-
-
     private static DatabaseController? Instance;
     private readonly NpgsqlConnection Connection;
 
@@ -23,7 +16,7 @@ public class DatabaseController
     {
         Console.Write("Acessing database ... ");
 
-        var connString = $"Host={DatabaseHost};Port={DatabasePort};Username={DatabseUser};Password={DatabasePassword};Database={DatabaseDatabase}";
+        var connString = $"Host={FrameworkEnviroment.DatabaseHost};Port={FrameworkEnviroment.DatabasePort};Username={FrameworkEnviroment.DatabseUser};Password={FrameworkEnviroment.DatabasePassword};Database={FrameworkEnviroment.DatabaseDatabase}";
 
         Connection = new NpgsqlConnection(connString);
         Connection.Open();
@@ -97,12 +90,10 @@ public class DatabaseController
 
     public void InitDatabase()
     {
-        var kienboec = new UserCredentials("kienboec", "daniel");
-        var altenhof = new UserCredentials("altenhof", "markus");
-        var admin = new UserCredentials("admin", "istrator");
-        UserService.CreateUser(admin, true);
-        UserService.CreateUser(kienboec);
-        UserService.CreateUser(altenhof);
+
+        UserService.CreateUser(FrameworkEnviroment.Admin, true);
+        UserService.CreateUser(FrameworkEnviroment.User1);
+        UserService.CreateUser(FrameworkEnviroment.User2);
 
         List<CardModel> package1 = new()
         {

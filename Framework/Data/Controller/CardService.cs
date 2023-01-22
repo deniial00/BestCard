@@ -92,9 +92,9 @@ public static class CardService
         tran.Commit();
     }
 
-    public static void AcquirePackage(int userId, int? userIdPayer = null)
+    public static void AcquirePackage(int receiverId, int? payerId = null)
     {
-        UserModel? user = UserService.GetUser(userIdPayer != null ? userIdPayer : userId);
+        UserModel? user = UserService.GetUser(payerId != null ? payerId : receiverId);
 
         if (user is null)
             throw new BattleException("Could not fetch user");
@@ -114,12 +114,12 @@ public static class CardService
                     card_id
                 FROM bestcard.cards
                 WHERE owner_user_id IS NULL
-                ORDER BY card_id
+                ORDER BY package_id
                 LIMIT 5
             );";
 
         var acquirePackageCmd = new NpgsqlCommand(acquirePackageQuery, connection, tran);
-        acquirePackageCmd.Parameters.Add(new NpgsqlParameter("@userid", userId));
+        acquirePackageCmd.Parameters.Add(new NpgsqlParameter("@userid", receiverId));
 
         var rowCount = acquirePackageCmd.ExecuteNonQuery();
 
@@ -131,7 +131,7 @@ public static class CardService
 
         tran.Commit();
 
-        UserService.UpdateUserCredits(user.UserId, -5);
+        UserService.UpdateUserCredits(user.UserId, -5); 
     }
 
     public static List<CardModel> GetCardsByUserId(int userId)

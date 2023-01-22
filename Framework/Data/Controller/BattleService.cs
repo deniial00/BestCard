@@ -34,7 +34,7 @@ public static class BattleService
 
 		var returnVal = getUserEloCmd.ExecuteScalar();
 
-		if (returnVal is not null)
+		if (returnVal is not null && returnVal is not System.DBNull)
 		{
 			return baseElo + (int) returnVal;
 		}

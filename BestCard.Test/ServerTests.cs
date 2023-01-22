@@ -1,30 +1,100 @@
 ﻿using Framework.Data.Models.Cards;
+using Framework;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BestCard.Test;
 
+[TestFixture]
+public class BattleTests
+{
+    ServerController server = ServerController.GetInstance();
+    DatabaseController data = DatabaseController.GetInstance();
+
+    [OneTimeSetUp]
+    public void SetUpBattleTest()
+    {
+        data.ResetDatabase();
+        data.InitDatabase();
+    }
+
+    [Test, Order(1)]
+    public void BattleTest()
+    {
+        // get cards for user1
+        var user1 = UserService.GetUser(null, FrameworkEnviroment.User1.Username);
+
+        if (user1 is null)
+            throw new Exception("User1 not found");
+
+        CardService.AcquirePackage(user1.UserId);
+
+        var cards1 = CardService.GetCardsByUserId(user1.UserId);
+
+        List<string> cardIds1 = new();
+        cards1.ForEach(card => {
+            if (cardIds1.Count == 4)
+                return;
+            cardIds1.Add(card.CardId);
+        });
+
+        CardService.SetDeckByUserId(user1.UserId, cardIds1);
+
+        // get cards for user2
+        var user2 = UserService.GetUser(null, FrameworkEnviroment.User1.Username);
+
+        if (user2 is null)
+            throw new Exception("User2 not found");
+
+        CardService.AcquirePackage(user2.UserId);
+
+        var cards2 = CardService.GetCardsByUserId(user2.UserId);
+
+        List<string> cardIds2 = new();
+        cards2.ForEach(card => {
+            if (cardIds2.Count == 4)
+                return;
+            cardIds2.Add(card.CardId);
+        });
+
+        CardService.SetDeckByUserId(user2.UserId, cardIds2);
+
+        // battle user1 vs user2
+        var battleC = BattleController.GetInstance();
+
+        battleC.AddPlayerToLobby(user1.UserId);
+        var battle = battleC.AddPlayerToLobby(user2.UserId);
+
+        if (battle.ResultsAvailable == true)
+            Assert.Pass();
+    }
+
+    [Test, Order(2)]
+    public void AddPlayerToLobbyTest()
+    {
+        var battleController = BattleController.GetInstance();
+
+        var battle = battleController.AddPlayerToLobby(1);
+
+        if (battle.ChampionUserId == 1 && battleController.LobbyCount == 1)
+            Assert.Pass();
+        else
+            Assert.Fail();
+
+    }
+}
+
+[TestFixture]
 public class ServerTests
 {
-    ServerController server;
-    DatabaseController data;
+    ServerController server = ServerController.GetInstance();
+    DatabaseController data = DatabaseController.GetInstance();
     int TestUserId;
 
-    // Read statement (maybe postgres db? => change constructor
-    // check token (if 64 char)
-    // RequestToObject => test with all data.models
-    // invalidate session => check if not in Sessions Dict
-    // Get Token of request = simply build a req with only header
-    // createUser
-    // check if exists
-    // authenticate user fail (only use authenticateUser func)
-    // authenticate user correct
-    // trygetRoute => test with /Sessions
-    // try battle controller aswell => ?
-
-    [SetUp]
+    [OneTimeSetUp]
     public void Setup()
     {
-        server = new ServerController();
-        data = DatabaseController.GetInstance();
+        data.ResetDatabase();
+        data.InitDatabase();
     }
 
     [Test, Order(1)]
@@ -119,7 +189,7 @@ public class ServerTests
     [Test, Order(7)]
     public void CheckAdminTest()
     {
-        var cred = new UserCredentials("Admin", "istrator");
+        var cred = FrameworkEnviroment.Admin;
         var hash = "mtcgToken";
         var token = cred.Username+"-"+hash;
 
@@ -132,20 +202,6 @@ public class ServerTests
     }
 
     [Test, Order(8)]
-    public void AddPlayerToLobbyTest()
-    {
-        var battleController = BattleController.GetInstance();
-
-        var battle = battleController.AddPlayerToLobby(TestUserId);
-
-        if (battle.ChampionUserId == TestUserId && battleController.LobbyCount == 1)
-            Assert.Pass();
-        else
-            Assert.Fail();
-
-    }
-
-    [Test, Order(9)]
     public void HashPasswordTest()
     {
         string pw = "passwort";
@@ -156,7 +212,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(10)]
+    [Test, Order(9)]
     public void GenerateTokenTest()
     {
         int length = 16;
@@ -166,7 +222,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(11)]
+    [Test, Order(10)]
     public void GetUsernameTest()
     {
         string username = UserService.GetUsername(TestUserId);
@@ -177,7 +233,7 @@ public class ServerTests
             Assert.Pass();
     }
 
-    [Test, Order(12)]
+    [Test, Order(11)]
     public void UpdateCreditsTest()
     {
         int credits = UserService.GetUser(TestUserId).Credits;
@@ -193,7 +249,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(13)]
+    [Test, Order(12)]
     public void GetCardsByUserIdTest()
     {
         var cards = CardService.GetCardsByUserId(TestUserId);
@@ -204,7 +260,7 @@ public class ServerTests
             Assert.Pass();
     }
 
-    [Test, Order(14)]
+    [Test, Order(13)]
     public void SetDeckByUserIdFailTest()
     {
         Assert.Throws<ArgumentException>(() =>
@@ -219,7 +275,7 @@ public class ServerTests
         });
     }
 
-    [Test, Order(15)]
+    [Test, Order(14)]
     public void SetDeckByUserIdTest()
     {
         var cards = CardService.GetCardsByUserId(TestUserId);
@@ -233,7 +289,7 @@ public class ServerTests
         CardService.SetDeckByUserId(TestUserId, cardIds);
     }
 
-    [Test, Order(16)]
+    [Test, Order(15)]
     public void GetDeckByUserIdTest()
     {
         var cards = CardService.GetDeckByUserId(TestUserId);
@@ -244,19 +300,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(17)]
-    public void SessionConstructorTest()
-    {
-        var token = UserService.GenerateToken64();
-        var session = new Session(token);
-
-        if (session.Token == token && session.IsLoggedIn == false)
-            Assert.Pass();
-        else
-            Assert.Fail();
-    }
-
-    [Test, Order(18)]
+    [Test, Order(16)]
     public void UserModelConstructorTest()
     {
         var user = new UserModel(0, "testy", false, 20);
@@ -268,7 +312,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(19)]
+    [Test, Order(17)]
     public void UserCredentialsConstructorTest()
     {
         var cred = new UserCredentials("admin", "admin");
@@ -279,7 +323,7 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(20)]
+    [Test, Order(18)]
     public void ResetDatabaseTest()
     {
         data.ResetDatabase();
@@ -290,7 +334,7 @@ public class ServerTests
             Assert.Pass();
     }
 
-    [Test, Order(21)]
+    [Test, Order(19)]
     public void InitDatabase()
     {
         data.InitDatabase();

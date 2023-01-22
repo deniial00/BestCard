@@ -8,6 +8,7 @@ public class BattleController
 {
     private Dictionary<int,BattleModel> Lobby;
     private static BattleController? Instance;
+    private static int BaseEloChange = 30;
 
     public int LobbyCount { get => Lobby.Count; }
 
@@ -36,7 +37,7 @@ public class BattleController
             battle.ChallengerUserId = userId;
             InitiateBattle(ref battle);
             Lobby.Remove(championElo);
-            BattleService.StoreBattle(battle);
+            battle.BattleId = BattleService.StoreBattle(battle);
         } else
         {
             battle = new BattleModel(userId);
@@ -88,6 +89,15 @@ public class BattleController
 
             battles.Add(round);
         }
+
+        bool challengerWon = false;
+
+        if (championDeck.Count == 0)
+            challengerWon = true;
+
+
+        battle.ChampionEloChange = challengerWon ? -BaseEloChange : BaseEloChange;
+        battle.ChallengerEloChange = challengerWon ? BaseEloChange : -BaseEloChange;
 
         battle.BattleRounds = battles;
         battle.ResultsAvailable = true;

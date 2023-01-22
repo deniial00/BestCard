@@ -8,12 +8,12 @@ using Newtonsoft.Json.Linq;
 
 try
 {
-    var server = new ServerController();
-    var battleController = BattleController.GetInstance();
+    var server = ServerController.GetInstance();
+    var bc = BattleController.GetInstance();
+    var db = DatabaseController.GetInstance();
 
     int battleTimeoutSeconds = 30;
 
-    var db = DatabaseController.GetInstance();
 
     // Create User
     server.AddRoute("/users", "POST", false, async (ctx) =>
@@ -211,7 +211,7 @@ try
                 throw new UserNotLoggedInException();
 
 
-            var battle = battleController.AddPlayerToLobby((int) userId);
+            var battle = bc.AddPlayerToLobby((int) userId);
 
             string jsonResponse = "";
 

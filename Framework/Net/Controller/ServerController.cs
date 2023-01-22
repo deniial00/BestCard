@@ -12,7 +12,7 @@ public class ServerController : IDisposable
 {
     private readonly int _maxThreadCount;
     private readonly HttpListener _listener;
-
+    private static ServerController? Instance;
 
     private bool IsRunning;
 
@@ -22,7 +22,7 @@ public class ServerController : IDisposable
 
     private Dictionary<string, Route> Routes { get; set; }
 
-    public ServerController(int port = 10001, int maxThreads = 5)
+    private ServerController(int port = 10001, int maxThreads = 5)
     {
         Console.Write("Server starting ...");
 
@@ -36,6 +36,14 @@ public class ServerController : IDisposable
         Sessions = new Dictionary<string, Session>();
         Routes = new Dictionary<string, Route>();
         Console.Write(" OK!\n");
+    }
+
+    public static ServerController GetInstance()
+    {
+        if (Instance == null)
+            Instance = new ServerController();
+
+        return Instance;
     }
 
     public void Dispose()
