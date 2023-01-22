@@ -40,7 +40,7 @@ public class BattleTests
         CardService.SetDeckByUserId(user1.UserId, cardIds1);
 
         // get cards for user2
-        var user2 = UserService.GetUser(null, FrameworkEnviroment.User1.Username);
+        var user2 = UserService.GetUser(null, FrameworkEnviroment.User2.Username);
 
         if (user2 is null)
             throw new Exception("User2 not found");
@@ -63,6 +63,8 @@ public class BattleTests
 
         battleC.AddPlayerToLobby(user1.UserId);
         var battle = battleC.AddPlayerToLobby(user2.UserId);
+
+        Console.Write(battle.ToJsonString());
 
         if (battle.ResultsAvailable == true)
             Assert.Pass();

@@ -8,7 +8,7 @@ public class BattleRound
 	public ICard ChampionCard;
 	public ICard ChallengerCard;
 
-    public string? RoundWinnerName;
+    public string RoundWinnerName;
     public bool? ChallengerSucceded;
 
     public float ChampionRemaining;
@@ -18,6 +18,7 @@ public class BattleRound
 	{
 		ChampionCard = championCard;
 		ChallengerCard = challengerCard;
+        RoundWinnerName = "";
 
 		CalculateRound();
 	}
@@ -53,12 +54,16 @@ public class BattleRound
 
         if (ChallengerRemaining <= 0 && ChampionRemaining > 0)
         {
-            RoundWinnerName = ChallengerCard.CardName;
+            if (ChallengerCard.CardElement != CardElement.Normal)
+                RoundWinnerName = ChallengerCard.CardElement.ToString();
+            RoundWinnerName += ChallengerCard.CardName;
             ChallengerSucceded = true;
         }
         else if (ChampionRemaining <= 0 && ChallengerRemaining > 0)
         {
-            RoundWinnerName = ChampionCard.CardName;
+            if (ChampionCard.CardElement != CardElement.Normal)
+                RoundWinnerName = ChampionCard.CardElement.ToString();
+            RoundWinnerName += ChampionCard.CardName;
             ChallengerSucceded = false;
         }
     }

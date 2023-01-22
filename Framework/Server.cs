@@ -258,8 +258,24 @@ try
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not create Package: {ex.Message}");
+            Console.WriteLine($"Could not gift Package: {ex.Message}");
             await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"{ex.Message}\"}}");
+        }
+    });
+
+    server.AddRoute("/stats", "GET", true, async (ctx) =>
+    {
+        try
+        {
+            var session = server.GetSession(ctx);
+
+            //var stats = 
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not get stats: {ex.Message}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"{ex.Message}\"}}");
+
         }
     });
 

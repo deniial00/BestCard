@@ -37,18 +37,18 @@ public class BattleModel
 
 
         string jsonString = "{";
-        jsonString += $"\"Match\": \"{championUsername.Trim()} vs {challengerUsername.Trim()}\",";
+        jsonString += $"\"match\": \"{championUsername.Trim()} vs {challengerUsername.Trim()}\",\"elo_change\": {{ \"champion\": {ChampionEloChange}, \"challenger\": {ChallengerEloChange}}}, \"rounds\": [";
         int roundCount = 1;
 
         foreach (var round in BattleRounds)
         {
-            jsonString += $"\"Round{roundCount}\": {round.SummarizeRoundJsonString()}";
+            jsonString += $"{round.SummarizeRoundJsonString()}";
             if (roundCount <= BattleRounds.Count - 1)
                 jsonString += ",";
             roundCount++;
         }
         
-        jsonString += "}";
+        jsonString += "]}";
 
         return jsonString;
     }

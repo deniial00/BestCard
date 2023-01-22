@@ -83,13 +83,5 @@ public static class BattleService
 		tran.Commit();
 		return (int) battleId;
 	}
-
-	// TODO:
-	// unique feature
-	// unit tests
-	// battles persistent?
-	// Add endpoint for get-user
-	// scoreboard/stats
-	// add money to user
 }
 
