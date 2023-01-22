@@ -30,12 +30,12 @@ namespace Framework.Data.Models.Cards.Monsters
 
         public float Attack(ICard enemyCard, float damageMultiplier)
         {
-            return enemyCard.CardAttack - CardDamage * damageMultiplier;
+            return enemyCard.CardDamage - CardDamage * damageMultiplier;
         }
 
         public void GetInfo()
         {
-            Console.Write($"Name: {CardElement + " " + CardName + Environment.NewLine}Type: {CardType + Environment.NewLine}Element: {CardElement + Environment.NewLine}Damage: {CardAttack + Environment.NewLine}");
+            Console.Write($"Name: {CardElement + " " + CardName + Environment.NewLine}Type: {CardType + Environment.NewLine}Element: {CardElement + Environment.NewLine}Damage: {CardDamage + Environment.NewLine}");
         }
     }
 }

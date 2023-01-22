@@ -1,12 +1,12 @@
-﻿using Framework.Net.Controller;
-using Framework.Net.Models;
-using Framework.Data.Controller;
-using Framework.Data.Models;
+﻿using Framework.Data.Models.Cards;
+
 namespace BestCard.Test;
 
 public class ServerTests
 {
     ServerController server;
+    DatabaseController data;
+    int TestUserId;
 
     // Read statement (maybe postgres db? => change constructor
     // check token (if 64 char)
@@ -24,9 +24,10 @@ public class ServerTests
     public void Setup()
     {
         server = new ServerController();
+        data = DatabaseController.GetInstance();
     }
 
-    [Test]
+    [Test, Order(1)]
     public void DatabaseAccessTest()
     {
         var db = DatabaseController.GetInstance();
@@ -39,33 +40,212 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test]
-    public void CheckAdminUserSession()
+    [Test, Order(2)]
+    public void NoSessionTest()
     {
-        var cred = new UserCredentials("denial", "password");
-        var expectedSession = Session.AdminUserSession();
-
-        Assert.That(expectedSession.Token, Is.EqualTo("Basic admin-mtcgToken"));
-        Assert.That(expectedSession.UserID, Is.EqualTo(1));
-        Assert.That(expectedSession.IsLoggedIn, Is.EqualTo(true));
+        Assert.Throws<UserNotLoggedInException>(() => server.CheckAdmin("notoken"));
     }
 
-    [Test]
-    public void RouteModelConstructorTest()
-    {
-        var route = new Route("/test", "GET", true, (ctx) =>
-        {
-            
-        });
 
-        if (route is not null)
+    [Test, Order(3)]
+    public void CreateUserTest()
+    {
+        var cred = new UserCredentials("test", "passwort");
+
+        TestUserId = UserService.CreateUser(cred);
+
+        var user = UserService.GetUser(TestUserId);
+
+        if (user is not null && user.UserId == TestUserId)
             Assert.Pass();
         else
             Assert.Fail();
     }
 
-    [Test]
-    public void SessionModelConstructorTest()
+    [Test, Order(4)]
+    public void LoginUserTest()
+    {
+        var cred = new UserCredentials("test", "passwort");
+        string token = "testToken";
+
+        var sess = server.CreateSession(cred.Username, token);
+
+        sess.UserID = UserService.AuthenticateUser(cred, token);
+
+        if (sess.UserID > 0 && server.GetSession(cred.Username + "-" + token) is not null)
+            Assert.Pass();
+    }
+
+    [Test, Order(5)]
+    public void AddPackagesTest()
+    {
+        List<CardModel> cards = new()
+        {
+            new CardModel("1", "test", 5.0f),
+            new CardModel("2", "test", 5.0f),
+            new CardModel("3", "test", 5.0f),
+            new CardModel("4", "test", 5.0f),
+            new CardModel("5", "test", 5.0f)
+        };
+
+        CardService.AddPackage(cards.ToArray());
+
+        var card = CardService.GetCard("1");
+
+        if (card.CardId == "1" && card.CardName == "test" && card.CardDamage == 5.0f)
+            Assert.Pass();
+        else
+            Assert.Fail();
+    }
+
+    [Test, Order(6)]
+    public void AcquirePackage()
+    {
+        var credits = UserService.GetUser(TestUserId).Credits;
+
+        CardService.AcquirePackage(TestUserId);
+
+        var user = UserService.GetUser(TestUserId);
+
+        if (user is not null && user.Credits != credits - 5)
+            Assert.Fail();
+
+        var cards = CardService.GetCardsByUserId(TestUserId);
+
+        if (cards.Count == 5)
+            Assert.Pass();
+    }
+
+    [Test, Order(7)]
+    public void CheckAdminTest()
+    {
+        var cred = new UserCredentials("Admin", "istrator");
+        var hash = "mtcgToken";
+        var token = cred.Username+"-"+hash;
+
+        server.CreateSession(cred.Username, hash);
+        
+        bool admin = server.CheckAdmin(token);
+
+        if (admin)
+            Assert.Pass();
+    }
+
+    [Test, Order(8)]
+    public void AddPlayerToLobbyTest()
+    {
+        var battleController = BattleController.GetInstance();
+
+        var battle = battleController.AddPlayerToLobby(TestUserId);
+
+        if (battle.ChampionUserId == TestUserId && battleController.LobbyCount == 1)
+            Assert.Pass();
+        else
+            Assert.Fail();
+
+    }
+
+    [Test, Order(9)]
+    public void HashPasswordTest()
+    {
+        string pw = "passwort";
+
+        string hash = UserService.HashPassword(pw);
+
+        if (hash != "33c5ebbb01d608c254b3b12413bdb03e46c12797e591770ccf20f5e2819929b2")
+            Assert.Fail();
+    }
+
+    [Test, Order(10)]
+    public void GenerateTokenTest()
+    {
+        int length = 16;
+        string tok =UserService.GenerateToken(length);
+
+        if (tok.Length != length)
+            Assert.Fail();
+    }
+
+    [Test, Order(11)]
+    public void GetUsernameTest()
+    {
+        string username = UserService.GetUsername(TestUserId);
+
+        if (username is null)
+            Assert.Fail();
+        else if (username == "test")
+            Assert.Pass();
+    }
+
+    [Test, Order(12)]
+    public void UpdateCreditsTest()
+    {
+        int credits = UserService.GetUser(TestUserId).Credits;
+
+        int res = UserService.UpdateUserCredits(TestUserId, 10);
+
+        if (res == -1)
+            Assert.Fail();
+
+        int newCredits = UserService.GetUser(TestUserId).Credits;
+
+        if (credits + 10 != newCredits)
+            Assert.Fail();
+    }
+
+    [Test, Order(13)]
+    public void GetCardsByUserIdTest()
+    {
+        var cards = CardService.GetCardsByUserId(TestUserId);
+
+        if (cards.Count != 5)
+            Assert.Fail();
+        else
+            Assert.Pass();
+    }
+
+    [Test, Order(14)]
+    public void SetDeckByUserIdFailTest()
+    {
+        Assert.Throws<ArgumentException>(() =>
+        {
+            var cards = CardService.GetCardsByUserId(TestUserId);
+            List<string> cardIds = new();
+            cards.ForEach(card => {
+                cardIds.Add(card.CardId);
+            });
+
+            CardService.SetDeckByUserId(TestUserId, cardIds);
+        });
+    }
+
+    [Test, Order(15)]
+    public void SetDeckByUserIdTest()
+    {
+        var cards = CardService.GetCardsByUserId(TestUserId);
+        List<string> cardIds = new();
+        cards.ForEach(card => {
+            if (cardIds.Count == 4)
+                return;
+            cardIds.Add(card.CardId);
+        });
+
+        CardService.SetDeckByUserId(TestUserId, cardIds);
+    }
+
+    [Test, Order(16)]
+    public void GetDeckByUserIdTest()
+    {
+        var cards = CardService.GetDeckByUserId(TestUserId);
+
+        if (cards is not null && cards.Count == 4)
+            Assert.Pass();
+        else
+            Assert.Fail();
+    }
+
+    [Test, Order(17)]
+    public void SessionConstructorTest()
     {
         var token = UserService.GenerateToken64();
         var session = new Session(token);
@@ -76,8 +256,20 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test]
-    public void UserCredentialsModelConstructorTest()
+    [Test, Order(18)]
+    public void UserModelConstructorTest()
+    {
+        var user = new UserModel(0, "testy", false, 20);
+
+        if (user.UserId == 0 && user.Username == "testy" &&
+            user.IsAdmin == false && user.Credits == 20)
+            Assert.Pass();
+        else
+            Assert.Fail();
+    }
+
+    [Test, Order(19)]
+    public void UserCredentialsConstructorTest()
     {
         var cred = new UserCredentials("admin", "admin");
 
@@ -87,18 +279,25 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test]
-    public void AddPlayerToLobbyTest()
+    [Test, Order(20)]
+    public void ResetDatabaseTest()
     {
-        var battleController = BattleController.GetInstance();
+        data.ResetDatabase();
 
-        int playerId = 1;
-        int returnVal = battleController.CreateBattleEvent(playerId);
+        var user = UserService.GetUser(null, "test");
 
-        if (returnVal == 1 && battleController.LobbyCount == 1)
+        if (user is null)
             Assert.Pass();
-        else
-            Assert.Fail();
+    }
 
+    [Test, Order(21)]
+    public void InitDatabase()
+    {
+        data.InitDatabase();
+
+        var user = UserService.GetUser(null, "admin");
+
+        if (user is null)
+            Assert.Fail();
     }
 }

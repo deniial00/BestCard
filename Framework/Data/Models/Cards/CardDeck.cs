@@ -13,6 +13,8 @@ public class CardDeck
 {
     private List<ICard> Cards;
 
+    public int Count { get => Cards.Count; }
+
     public CardDeck(List<ICard> cards)
     {
         Cards = cards;
@@ -47,7 +49,9 @@ public class CardDeck
 
     public ICard DrawCard()
     {
-        return Cards.First();
+        ICard card = Cards.First();
+        Cards.RemoveAt(Cards.IndexOf(card));
+        return card;
     }
 
     public ICard RemoveCard(ICard card)

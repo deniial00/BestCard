@@ -7,6 +7,28 @@ namespace Framework.Data.Controller;
 
 public static class CardService
 {
+    public static CardModel? GetCard(string cardId)
+    {
+        var conn = DatabaseController.GetInstance().GetConnection();
+        CardModel? card = null;
+
+        string query = "SELECT * FROM bestcard.cards WHERE card_id = @card_id";
+        var cmd = new NpgsqlCommand(query, conn);
+        cmd.Parameters.Add(new NpgsqlParameter("@card_id", cardId));
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                string id = reader.GetString(reader.GetOrdinal("card_id"));
+                string name = reader.GetString(reader.GetOrdinal("card_name"));
+                float dmg = reader.GetFloat(reader.GetOrdinal("card_damage"));
+                card = new CardModel(id, name, dmg);
+            }
+        }
+
+        return card;
+    }
+
     public static void AddPackage(CardModel[] cards)
     {
         var connection = DatabaseController.GetInstance().GetConnection();
@@ -70,8 +92,16 @@ public static class CardService
         tran.Commit();
     }
 
-    public static void AcquirePackage(int userId)
+    public static void AcquirePackage(int userId, int? userIdPayer = null)
     {
+        UserModel? user = UserService.GetUser(userIdPayer != null ? userIdPayer : userId);
+
+        if (user is null)
+            throw new BattleException("Could not fetch user");
+
+        if (user.Credits < 5)
+            throw new BattleException("Not enough credits");
+
         var connection = DatabaseController.GetInstance().GetConnection();
         var tran = connection.BeginTransaction();
 
@@ -100,6 +130,8 @@ public static class CardService
         }
 
         tran.Commit();
+
+        UserService.UpdateUserCredits(user.UserId, -5);
     }
 
     public static List<CardModel> GetCardsByUserId(int userId)
@@ -171,10 +203,11 @@ public static class CardService
     public static void SetDeckByUserId(int userid, List<string> cards)
     {
         var connection = DatabaseController.GetInstance().GetConnection();
-        var tran = connection.BeginTransaction();
 
         if (cards.Count != 4)
             throw new ArgumentException($"{cards.Count} cards were passed. Exactly 4 cards need to be passed");
+
+        var tran = connection.BeginTransaction();
 
         // unselect all current cards of user
         string updateCardsQuery =
@@ -196,22 +229,24 @@ public static class CardService
                 owner_user_id = @userid
                 and card_id IN (@card1, @card2, @card3, @card4)";
 
-        var paramList = new List<NpgsqlParameter>();
-        paramList.Add(new NpgsqlParameter("@userid", userid));
-
-        for (int i = 0; i < 4; i++)
-            paramList.Add(new NpgsqlParameter("@card" + (i+1), cards[i]));
-        
+        var paramList = new List<NpgsqlParameter>
+        {
+            new NpgsqlParameter("@userid", userid),
+            new NpgsqlParameter("@card1", cards[0]),
+            new NpgsqlParameter("@card2", cards[1]),
+            new NpgsqlParameter("@card3", cards[2]),
+            new NpgsqlParameter("@card4", cards[3])
+        };
 
         var updateCardsCmd2 = new NpgsqlCommand(updateCardsQuery, connection, tran);
         updateCardsCmd2.Parameters.AddRange(paramList.ToArray());
         int rowCount = updateCardsCmd2.ExecuteNonQuery();
 
-        //if (rowCount != 4)
-        //{
-        //    tran.Rollback();
-        //    throw new ArgumentException("SQL Error");
-        //}
+        if (rowCount != 4)
+        {
+            tran.Rollback();
+            throw new ArgumentException("Invalid Package IDs");
+        }
 
         tran.Commit();
     }

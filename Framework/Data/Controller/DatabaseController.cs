@@ -1,5 +1,8 @@
 ﻿using System.Text.Json;
 using Framework.Data.Models;
+using Framework.Net.Controller;
+using Framework.Net.Models;
+using Newtonsoft.Json;
 using Npgsql;
 
 namespace Framework.Data.Controller;
@@ -19,22 +22,11 @@ public class DatabaseController
     private DatabaseController()
     {
         Console.Write("Acessing database ... ");
+
         var connString = $"Host={DatabaseHost};Port={DatabasePort};Username={DatabseUser};Password={DatabasePassword};Database={DatabaseDatabase}";
-        try
-        {
-            Connection = new NpgsqlConnection(connString);
-            Connection.Open();
 
-            if(!CheckConnection())
-                throw new NpgsqlException("Error could not create connection");
-            
-        }
-        catch(Exception ex)
-        {
-            Console.WriteLine($"Acces to database failed with error: {ex.Message}");
-        }
-
-        
+        Connection = new NpgsqlConnection(connString);
+        Connection.Open();
 
         Console.Write("OK!\n");
     }
@@ -91,6 +83,49 @@ public class DatabaseController
         }
 
         return (affectedRows, tran);
+    }
+
+    public void ResetDatabase()
+    {
+        string resetDB =
+            @"TRUNCATE TABLE bestcard.users RESTART IDENTITY;
+            TRUNCATE TABLE bestcard.cards RESTART IDENTITY;
+            TRUNCATE TABLE bestcard.battles RESTART IDENTITY;";
+        var resetDBCmd = new NpgsqlCommand(resetDB, Connection);
+        resetDBCmd.ExecuteNonQuery();
+    }
+
+    public void InitDatabase()
+    {
+        var kienboec = new UserCredentials("kienboec", "daniel");
+        var altenhof = new UserCredentials("altenhof", "markus");
+        var admin = new UserCredentials("admin", "istrator");
+        UserService.CreateUser(admin, true);
+        UserService.CreateUser(kienboec);
+        UserService.CreateUser(altenhof);
+
+        List<CardModel> package1 = new()
+        {
+            new CardModel("845f0dc7-37d0-426e-994e-43fc3ac83c08", "WaterGoblin", 10.0f),
+            new CardModel("99f8f8dc-e25e-4a95-aa2c-782823f36e2a", "Dragon", 50.0f),
+            new CardModel("e85e3976-7c86-4d06-9a80-641c2019a79f", "WaterSpell", 20.0f),
+            new CardModel("1cb6ab86-bdb2-47e5-b6e4-68c5ab389334", "Ork", 45.0f),
+            new CardModel("dfdd758f-649c-40f9-ba3a-8657f4b3439f", "FireSpell", 25.0f)
+        };
+
+        CardService.AddPackage(package1.ToArray());
+
+        List<CardModel> package2 = new()
+        {
+            new CardModel("134212c2-fd7a-4600-b313-122b02322fd5", "FireGoblin", 12.0f),
+            new CardModel("19f8f8dc-e25e-4a95-aa2c-782823f36ede", "WaterDragon", 35.0f),
+            new CardModel("f85e3976-7c86-4d06-9a80-641c2019a79e", "WaterSpell", 20.0f),
+            new CardModel("1cb6ab86-bdb2-47e5-b6e4-68c5ab38fv56", "FireOrk", 30.0f),
+            new CardModel("4fvj758f-da9c-40f9-ba3a-8657f4b3da24", "FireSpell", 25.0f)
+        };
+
+        CardService.AddPackage(package2.ToArray());
+
     }
 
     public int LogMessage()

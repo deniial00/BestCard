@@ -21,7 +21,8 @@ public class UserCredentials
     public UserCredentials(string name, string password)
     {
         Username = name;
-        Password = UserService.HashPassword(password);
+        if (password is not null && password != "")
+            Password = UserService.HashPassword(password);
     }
 }
 

@@ -8,9 +8,13 @@ public class BattleRound
 	public ICard ChampionCard;
 	public ICard ChallengerCard;
 
-	public bool? ChallengerSucceded;
+    public string? RoundWinnerName;
+    public bool? ChallengerSucceded;
 
-	public BattleRound(ICard championCard, ICard challengerCard)
+    public float ChampionRemaining;
+    public float ChallengerRemaining;
+
+    public BattleRound(ICard championCard, ICard challengerCard)
 	{
 		ChampionCard = championCard;
 		ChallengerCard = challengerCard;
@@ -18,17 +22,17 @@ public class BattleRound
 		CalculateRound();
 	}
 
-    private ICard? CalculateRound()
+    private void CalculateRound()
     {
-        float card1DamageMultiplier = 1;
-        float card2DamageMultiplier = 1;
+        float championDamageMultiplier = 1;
+        float challengerDamageMultiplier = 1;
 
         if (ChampionCard.CardType == CardType.Spell)
         {
             if (ChampionCard.CardEffectiveAgainst == ChallengerCard.CardElement)
             {
-                card1DamageMultiplier = 2;
-                card2DamageMultiplier = 0.5f;
+                championDamageMultiplier = 2;
+                challengerDamageMultiplier = 0.5f;
             }
         }
 
@@ -36,29 +40,44 @@ public class BattleRound
         {
             if (ChallengerCard.CardEffectiveAgainst == ChampionCard.CardElement)
             {
-                card1DamageMultiplier = 0.5f;
-                card2DamageMultiplier = 2;
+                championDamageMultiplier = 0.5f;
+                challengerDamageMultiplier = 2;
             }
         }
 
-        float card2Remaining = ChampionCard.Attack(ChallengerCard, card1DamageMultiplier);
-        float card1Remaining = ChallengerCard.Attack(ChampionCard, card2DamageMultiplier);
+        ChampionRemaining = ChampionCard.Attack(ChallengerCard, championDamageMultiplier);
+        ChallengerRemaining = ChallengerCard.Attack(ChampionCard, challengerDamageMultiplier);
 
-        if (card1Remaining <= 0 && card2Remaining > 0)
+        if (ChallengerRemaining == ChampionRemaining)
+            return;
+
+        if (ChallengerRemaining <= 0 && ChampionRemaining > 0)
         {
-            return ChallengerCard;
+            RoundWinnerName = ChallengerCard.CardName;
+            ChallengerSucceded = true;
         }
-        else if (card2Remaining <= 0 && card1Remaining > 0)
+        else if (ChampionRemaining <= 0 && ChallengerRemaining > 0)
         {
-            return ChampionCard;
+            RoundWinnerName = ChampionCard.CardName;
+            ChallengerSucceded = false;
         }
-        return null;
     }
 
-    public void PrintRound(ICard card1, ICard card2)
+    public string SummarizeRound()
     {
-        Console.Write($"PlayerA: {card1.CardElement + card1.CardName} ({card1.CardDamage} dmg) vs.{Environment.NewLine}" +
-                      $"PlayerB: {card2.CardElement + card2.CardName} ({card2.CardDamage} dmg){Environment.NewLine}");
+        string ret = $"Champion: {ChampionCard.CardElement + ChampionCard.CardName} ({ChampionCard.CardDamage} dmg) vs Challenger: {ChallengerCard.CardElement + ChallengerCard.CardName} ({ChallengerCard.CardDamage} dmg){Environment.NewLine}" +
+                     $"{ChampionCard.CardDamage} vs {ChallengerCard.CardDamage} => {(int)ChampionRemaining} vs {(int)ChallengerRemaining} => {(RoundWinnerName is not null ? RoundWinnerName : "Draw")}";
+
+        return ret;
+    }
+
+    public string SummarizeRoundJsonString()
+    {
+        string ret =    $"{{ " +
+                        $"  \"matchup\": \"Champion: {ChampionCard.CardElement + ChampionCard.CardName} ({ChampionCard.CardDamage} dmg) vs Challenger: {ChallengerCard.CardElement + ChallengerCard.CardName} ({ChallengerCard.CardDamage} dmg)\"," +
+                        $"  \"result\": \"{ChampionCard.CardDamage} vs {ChallengerCard.CardDamage} => {(int)ChampionRemaining} vs {(int)ChallengerRemaining} => {(RoundWinnerName is not null ? RoundWinnerName : "Draw")}\"" +
+                        $"}}";
+        return ret;
     }
 
 

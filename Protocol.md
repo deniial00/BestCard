@@ -1,5 +1,11 @@
 # BestCard
 
+## Unique Feature: Gifting packages
+
+Added endpoint "/gift" which expects a UserId as parameter. { "Username": "admin"}
+
+Adds a package to this user and substracts 5 credits from session user.
+
 ## Protocol
 
 ### 17.09.2022: GameLogic Setup
@@ -92,9 +98,17 @@
   * AcquirePackage
 * Approx. 20h
 
-### 14.1.2023: New Routes
+### 17.1.2023: New Routes
 
 * added GET cards
 * added GET deck
 * added PUT deck
-* started working on BattleService
+* started working on BattleService Class
+* Approx. 10h
+
+### 22.1.2023: Working Battle
+
+* Now working battle.
+* Added last unit tests
+* fixed a lot of bugs
+* Approx. 10h

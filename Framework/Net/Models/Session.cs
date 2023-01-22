@@ -14,6 +14,8 @@ public class Session
 
     public bool IsLoggedIn;
 
+    public bool IsAdmin;
+
     public DateTime LastAction;
 
     public Session() { }
@@ -23,25 +25,17 @@ public class Session
         Token = token;
         UserID = null;
         IsLoggedIn = false;
+        IsAdmin = false;
         LastAction = DateTime.Now;
     }
 
-    public Session(UserCredentials cred, string token)
+    public Session(string username, string token)
     {
         Token = token;
-        UserName = cred.Username;
+        UserName = username;
         IsLoggedIn = false;
+        IsAdmin = false;
         LastAction = DateTime.Now;
     }
 
-    // TODO: Rework admin user session
-    public static Session AdminUserSession()
-    {
-        var sess = new Session();
-        sess.UserID = 1;
-        sess.Token = "Basic admin-mtcgToken";
-        sess.IsLoggedIn = true;
-        sess.LastAction = DateTime.Now;
-        return sess;
-    }
 }

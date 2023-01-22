@@ -24,12 +24,6 @@ public class ServerController : IDisposable
 
     public ServerController(int port = 10001, int maxThreads = 5)
     {
-        // https://stackoverflow.com/questions/4672010/multi-threading-with-net-httplistener
-        //_stopEvent = new ManualResetEvent(false);
-        //_idleEvent = new ManualResetEvent(false);
-        //_busy = new Semaphore(_maxThreadCount, _maxThreadCount);
-        //_listenerThread = new Thread(HandleRequestsAsync);
-
         Console.Write("Server starting ...");
 
         _maxThreadCount = maxThreads;
@@ -44,43 +38,13 @@ public class ServerController : IDisposable
         Console.Write(" OK!\n");
     }
 
-    //public ServerController()
-    //{
-    //}
-
     public void Dispose()
     {
         Console.Write("Server shutting down\r\n");
         Stop();
     }
 
-    public void HandleRequests()
-    {
-        _listener.Start();
-
-        while (_listener.IsListening)
-        {
-            Console.Write("Listening...\r\n");
-
-            var context = _listener.GetContext();
-            var request = context.Request;
-            var response = context.Response;
-
-            Console.Write($"Connected with url: {context.Request.Url}\r\n");
-
-            Route? route = TryGetRoute(context);
-
-            if (route is null)
-                continue;
-
-            route.Execute(context);
-
-            if(response is not null)
-                response.Close();
-        }
-    }
-
-    public async Task HandleRequestsAsync()
+    public async Task Listen()
     {
         _listener.Start();
 
@@ -90,36 +54,53 @@ public class ServerController : IDisposable
 
             var context = await _listener.GetContextAsync();
 
-            await Task.Run(async () =>
-            {
-                Console.Write($"Connected with url: {context.Request.Url.LocalPath}\r\n");
-
-                var request = context.Request;
-                var response = context.Response;
-                Route? route = await TryGetRouteAsync(context);
-
-                if (route is null)
-                    return;
-
-                // Execute Auth when required
-                if (route.RequireAuth)
-                {
-                    var session = CheckSession(context);
-                    if (session is null || !session.IsLoggedIn)
-                    {
-                        await SendResponseAsync(response, 401, $"{{ \"Error\": \"User not logged in\" }}");
-                        return;
-                    }
-                }
-
-                route.Execute(context);
-
-                if (response is not null)
-                    response.Close();
-
-            }).ConfigureAwait(false);
-
+            Thread thread = new Thread(() => HandleRequestAsync(context));
+            thread.Start();
         }
+    }
+
+    private async void HandleRequestAsync(HttpListenerContext ctx)
+    {
+        Console.Write($"Connected with url: {ctx.Request.Url.LocalPath}\r\n");
+
+        var request = ctx.Request;
+        var response = ctx.Response;
+
+        if (request.HttpMethod == "OPTIONS")
+        {
+            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT");
+            response.AddHeader("Access-Control-Max-Age", "1728000");
+            response.AppendHeader("Access-Control-Allow-Origin", "*");
+            response.Close();
+            return;
+        }
+
+        response.AppendHeader("Access-Control-Allow-Origin", "*");
+
+        Route? route = await TryGetRouteAsync(ctx);
+
+        if (route is null)
+            return;
+
+        // Execute Auth when required
+        if (route.RequireAuth)
+        {
+            try
+            {
+                var session = CheckSession(ctx);
+
+            }
+            catch (UserNotLoggedInException ex)
+            {
+                await SendResponseAsync(response, 401, $"{{ \"Error\": \"User not logged in\" }}");
+                return;
+            }
+        }
+
+        route.Execute(ctx);
+
+        if (response is not null)
+            response.Close();
     }
 
     public void Stop()
@@ -236,22 +217,33 @@ public class ServerController : IDisposable
 
             // if valid then set LastAction
             session.LastAction = DateTime.Now;
-        } 
-        
-        // TODO: Change to actually work only for admin token
-        // currently every auth header with "mtcgToken" is authenticated as admin
-        if (token.Substring(token.IndexOf("-") + 1) == "mtcgToken")
+        } else if (token == "admin-mtcgToken")
         {
-            session = Session.AdminUserSession();
-            Console.WriteLine("Creating Admin Session");
-            Sessions.Add(token, session);
+            session = CreateSession("admin", "mtcgToken");
+            session.IsAdmin = true;
+            session.IsLoggedIn = true;
         }
 
         // no active session
-        if (session is null)
-            throw new UserNotLoggedInException(ctx.Response);
+        if (session is null || !session.IsLoggedIn)
+            throw new UserNotLoggedInException();
 
         return session;
+    }
+
+    public bool CheckAdmin(string token)
+    {
+        Session? sess = GetSession(token);
+
+        if (sess is null)
+            throw new UserNotLoggedInException();
+
+        return sess.IsAdmin;
+    }
+
+    public bool CheckAdmin(HttpListenerRequest req)
+    {
+        return CheckAdmin(GetTokenOfRequest(req));
     }
 
     public Session? GetSession(string token)
@@ -273,14 +265,19 @@ public class ServerController : IDisposable
         return session;
     }
 
-    public Session CreateSession(UserCredentials cred, HttpListenerResponse res)
+    public Session CreateSession(string username, string hash = "")
     {
-        string token = $"{cred.Username}-{UserService.GenerateToken64()}";
-        var session = new Session(cred, token);
+        if (hash == "")
+            hash = UserService.GenerateToken(8);
 
-        // add to dic and add header
+        string token = $"{username}-{hash}";
+        var session = new Session(username, token);
+
+        if (hash == "mtcgToken")
+            session.IsAdmin = true;
+
+        // add to dic
         Sessions.Add(token, session);
-        res.Cookies.Add(new Cookie("Authorization", $"Basic {token}"));
 
         return session;
     }
@@ -298,9 +295,9 @@ public class ServerController : IDisposable
         {
             response.ContentEncoding = Encoding.UTF8;
             response.Headers.Add(HttpRequestHeader.ContentType, "application/json");
-            byte[] buffer = Array.Empty<byte>();
+            response.Headers.Add("Access-Control-Allow-Origin", "*");
             string jsonString = JsonConvert.SerializeObject(data);
-            buffer = Encoding.UTF8.GetBytes(jsonString);
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonString);
             await response.OutputStream.WriteAsync(buffer);
         }
 
@@ -315,6 +312,7 @@ public class ServerController : IDisposable
         {
             response.ContentEncoding = Encoding.UTF8;
             response.Headers.Add(HttpRequestHeader.ContentType, "application/json");
+            response.Headers.Add("Access-Control-Allow-Origin", "*");
             byte[] buffer = Array.Empty<byte>();
             string jsonString = JsonConvert.SerializeObject(data);
             buffer = Encoding.UTF8.GetBytes(jsonString);
@@ -336,6 +334,8 @@ public class ServerController : IDisposable
                 body = readStream.ReadToEnd();
             }
         }
+
+        Console.WriteLine("Body: " + body);
 
         if (body is null || body.Length <= 0)
             throw new ArgumentException("Could not parse body");

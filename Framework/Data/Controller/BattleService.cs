@@ -1,5 +1,6 @@
 ﻿using System;
 using Framework.Data.Controller;
+using Framework.Data.Models;
 using Npgsql;
 
 namespace Framework.Data.Controller;
@@ -19,7 +20,8 @@ public static class BattleService
 						SUM(champion_elo_change)
 					FROM bestcard.battles
 					WHERE champion_user_id = @userid
-				) + 
+				) +
+				(
 					SELECT
 						SUM(challenger_elo_change)
 					FROM bestcard.battles
@@ -39,8 +41,55 @@ public static class BattleService
 		return baseElo;
 	}
 
-	// TODO: stats/scoreboard
-	// Store battles in db with: champion_user_id (?), challenger_user_id, challenger_succeded, champion_elo_change, challenger_elo_change
-	// In scoreboard calculate elo based on changes
+	public static int StoreBattle(BattleModel battle)
+	{
+		var conn = DatabaseController.GetInstance().GetConnection();
+
+		var tran = conn.BeginTransaction();
+
+		string createBattleQuery =
+			@"INSERT INTO bestcard.battles
+			(
+				champion_user_id,
+				challenger_user_id,
+				champion_elo_change,
+				challenger_elo_change,
+				battle_timestamp
+			)
+			VALUES
+			(
+				@championId,
+				@challengerId,
+				@championElo,
+				@challengerElo,
+				NOW()
+			)
+			RETURNING battle_id;";
+
+		var createBattleCmd = new NpgsqlCommand(createBattleQuery, conn, tran);
+		createBattleCmd.Parameters.Add(new NpgsqlParameter("@championId", battle.ChampionUserId));
+        createBattleCmd.Parameters.Add(new NpgsqlParameter("@challengerId", battle.ChallengerUserId));
+        createBattleCmd.Parameters.Add(new NpgsqlParameter("@championElo", battle.ChampionEloChange));
+        createBattleCmd.Parameters.Add(new NpgsqlParameter("@challengerElo", battle.ChallengerEloChange));
+
+		var battleId = createBattleCmd.ExecuteScalar();
+
+		if (battleId is null || (int)battleId < 1)
+		{
+			tran.Rollback();
+			throw new Exception("Query failed");
+		}
+
+		tran.Commit();
+		return (int) battleId;
+	}
+
+	// TODO:
+	// unique feature
+	// unit tests
+	// battles persistent?
+	// Add endpoint for get-user
+	// scoreboard/stats
+	// add money to user
 }
 

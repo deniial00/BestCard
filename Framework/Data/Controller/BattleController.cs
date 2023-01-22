@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Framework.Data.Models;
+﻿using Framework.Data.Models;
 using Framework.Data.Models.Cards;
+using Framework.Models;
 
 namespace Framework.Data.Controller;
 
@@ -38,7 +34,9 @@ public class BattleController
         {
             // FIGHT!
             battle.ChallengerUserId = userId;
-            InitiateBattle(battle);
+            InitiateBattle(ref battle);
+            Lobby.Remove(championElo);
+            BattleService.StoreBattle(battle);
         } else
         {
             battle = new BattleModel(userId);
@@ -48,25 +46,50 @@ public class BattleController
         return battle;
     }
 
-    // TODO: IniateBattle
-    // get decks of users
-    // Calculate Result 100 times or until deck of user is empty
-    // always give card of loser to winner
-    // 100 battles => draw
-
-    public void InitiateBattle(BattleModel battle)
+    public void InitiateBattle(ref BattleModel battle)
     {
         if (battle.ChallengerUserId is null)
             throw new BattleException("Challenger UserID not provided");
 
         var championCardModels = CardService.GetDeckByUserId(battle.ChampionUserId);
-        CardDeck championdeck = new CardDeck(CardFactory.ConvertCards(championCardModels));
+        CardDeck championDeck = new CardDeck(CardFactory.ConvertCards(championCardModels));
 
         var challengerCardModels = CardService.GetDeckByUserId((int) battle.ChallengerUserId);
-        CardDeck challengerdeck = new CardDeck(CardFactory.ConvertCards(championCardModels));
+        CardDeck challengerDeck = new CardDeck(CardFactory.ConvertCards(challengerCardModels));
 
+        List<BattleRound> battles = new();
 
+        while (championDeck.Count > 0 && challengerDeck.Count > 0)
+        {
+            if (battles.Count >= 100)
+                break;
 
+            var championCard = championDeck.DrawCard();
+            var challengerCard = challengerDeck.DrawCard();
+            var round = new BattleRound(championCard, challengerCard);
 
+            
+            switch (round.ChallengerSucceded)
+            {
+                case true:
+                    // Challenger won
+                    challengerDeck.AddCard(championCard);
+                    break;
+                case false:
+                    // Champion won
+                    championDeck.AddCard(challengerCard);
+                    break;
+                case null:
+                    // DRAW
+                    challengerDeck.AddCard(challengerCard);
+                    championDeck.AddCard(championCard);
+                    break;
+            }
+
+            battles.Add(round);
+        }
+
+        battle.BattleRounds = battles;
+        battle.ResultsAvailable = true;
     }
 }

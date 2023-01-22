@@ -1,15 +1,17 @@
 ﻿using System.Net;
-using Framework.Data.Controller;
+using Newtonsoft.Json;
 using Framework.Data.Controller;
 using Framework.Data.Models;
 using Framework.Net.Controller;
 using Framework.Net.Models;
-using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 try
 {
     var server = new ServerController();
     var battleController = BattleController.GetInstance();
+
+    int battleTimeoutSeconds = 30;
 
     var db = DatabaseController.GetInstance();
 
@@ -23,16 +25,42 @@ try
             if (cred is null)
                 throw new Exception("Could not parse json");
 
-            //cred.Password = UserService.HashPassword(cred.Password);
             UserService.CreateUser(cred);
-            await server.SendResponseAsync(ctx.Response, 201, $"User {cred.Username} created");
+            await server.SendResponseAsync(ctx.Response, 201, $"{{ \"message\": \"User {cred.Username} created\" }}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Coult not create user: {ex.Message}");
 
             int statusCode = ex.Message.CompareTo("User already exists") == 0 ? 409 : 500;
-            await server.SendResponseAsync(ctx.Response, statusCode, $"{{ \"Error\": \"User not created: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, statusCode, $"{{ \"error\": \"User not created: {ex.Message}\" }}");
+        }
+
+    });
+
+    // Get User
+    server.AddRoute("/users", "GET", true, async (ctx) =>
+    {
+        try
+        {
+            var sess = server.GetSession(ctx);
+
+            if (sess is null || sess.UserID is null)
+                throw new UserNotLoggedInException();
+
+            UserModel user = UserService.GetUser((int) sess.UserID);
+
+            if (user is null)
+                throw new Exception("User not found");
+
+            string json = JsonConvert.SerializeObject(user);
+            await server.SendResponseAsync(ctx.Response, 200, json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Coult not get User: {ex.Message}");
+
+            await server.SendResponseAsync(ctx.Response, 500, $"{{ \"error\": \"Could not fetch user: {ex.Message}\" }}");
         }
 
     });
@@ -42,49 +70,47 @@ try
     {
         try
         {
-            // check if token already has a session
-            var session = server.CheckSession(ctx);
             var cred = server.RequestToObject<UserCredentials>(ctx.Request.InputStream);
+            var session = server.CreateSession(cred.Username);
+            ctx.Response.SetCookie(new Cookie("Authorization", $"Basic {session.Token}"));
 
-            if (session is null)
-                session = server.CreateSession(cred, ctx.Response);
+            session.UserID = UserService.AuthenticateUser(cred);
 
-            if (session.IsLoggedIn)
-                throw new ArgumentException("User already logged in");
-            else 
-                session.IsLoggedIn = UserService.AuthenticateUser(cred);
+            if (session.UserID > 0)
+                session.IsLoggedIn = true;
+            
 
             // still not logged in? Invalid cred!
             if (!session.IsLoggedIn)
                 throw new InvalidOperationException("Invalid Credentials");
             
 
-            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"Message\": \"User\" {cred.Username} authenticated,\"Token\": \"{ session.Token}\" }}");
+            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"message\": \"User {cred.Username} authenticated\", \"token\": \"{session.Token}\" }}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Could not authenticate user: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"User could not be authenticated: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"User could not be authenticated: {ex.Message}\"}}");
         }
 
     });
 
     // Create Package
-    // TODO: check if admin
     server.AddRoute("/packages", "POST", true, async (ctx) =>
     {
         try
         {
+            server.CheckAdmin(ctx.Request);
             CardModel[] cards = server.RequestToObject<CardModel[]>(ctx.Request.InputStream);
 
             CardService.AddPackage(cards);
 
-            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"Message\": \"Package created\"}}");
+            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"message\": \"Package created\"}}");
 
         } catch (Exception ex)
         {
             Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"Could not create package: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could not create package: {ex.Message}\"}}");
         }
     });
 
@@ -97,12 +123,12 @@ try
 
             CardService.AcquirePackage((int) session.UserID);
 
-            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"Message\": \"Package acquired\"}}");
+            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"message\": \"Package acquired\" }}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"{ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"{ex.Message}\"}}");
         }
     });
 
@@ -124,7 +150,7 @@ try
         catch (Exception ex)
         {
             Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"Could not create package: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could not create package: {ex.Message}\" }}");
         }
 
     });
@@ -147,7 +173,7 @@ try
         catch (Exception ex)
         {
             Console.WriteLine($"Could not retrieve deck: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"{ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"{ex.Message}\"}}");
         }
 
     });
@@ -163,13 +189,13 @@ try
 
             CardService.SetDeckByUserId((int) session.UserID, cards);
 
-            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"Message\": \"Cards selected\" }}");
+            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"message\": \"Cards selected\" }}");
 
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"Could not select cards: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could not select cards: {ex.Message}\"}}");
         }
 
     });
@@ -179,34 +205,66 @@ try
         try
         {
             var session = server.GetSession(ctx);
-
             var userId = session.UserID;
 
             if (userId is null)
                 throw new UserNotLoggedInException();
 
+
             var battle = battleController.AddPlayerToLobby((int) userId);
 
-            var perodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
-            
-            while (await perodicTimer.WaitForNextTickAsync())
-            {
-                if (battle.ResultsAvailable)
-                {
+            string jsonResponse = "";
 
-                }
+            int checkCount = 0;
+            while (!battle.ResultsAvailable)
+            {
+                if (checkCount >= battleTimeoutSeconds / 0.5)
+                    throw new BattleException("No avaiable opponent. Timeout after 30s.");
+
+                if (battle.ResultsAvailable)
+                    jsonResponse = battle.ToJsonString();
+                
+                checkCount++;
+
+                Thread.Sleep(500);
             }
+
+            await server.SendResponseAsync(ctx.Response, 200, battle.ToJsonString());
 
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Could not find battle: {ex.Message}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could not find Battle: {ex.Message}\"}}");
+        }
+    });
+
+    server.AddRoute("/gift", "POST", true, async (ctx) =>
+    {
+        try
+        {
+            var session = server.GetSession(ctx);
+
+            var cred = server.RequestToObject<UserCredentials>(ctx.Request.InputStream);
+
+            var receiverUser = UserService.GetUser(null, cred.Username);
+
+            if (receiverUser is null)
+                throw new ArgumentException("User not found");
+
+            CardService.AcquirePackage(receiverUser.UserId, (int)session.UserID);
+
+            await server.SendResponseAsync(ctx.Response, 200, $"{{ \"message\": \"Package gifted to {receiverUser.Username}\" }}");
+        }
+        catch (Exception ex)
+        {
             Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"Error\": \"Could not select cards: {ex.Message}\"}}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"{ex.Message}\"}}");
         }
     });
 
 
-    await server.HandleRequestsAsync();
+    await server.Listen();
 }
 catch (Exception ex)
 {
