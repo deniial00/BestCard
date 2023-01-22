@@ -171,7 +171,7 @@ public class ServerTests
     }
 
     [Test, Order(6)]
-    public void AcquirePackage()
+    public void AcquirePackageTest()
     {
         var credits = UserService.GetUser(TestUserId).Credits;
 

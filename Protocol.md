@@ -1,5 +1,9 @@
 # BestCard
 
+## Git-Url
+
+https://github.com/deniial00/BestCard
+
 ## Unique Feature: Gifting packages
 
 Added endpoint "/gift" which expects a UserId as parameter. { "Username": "admin"}
