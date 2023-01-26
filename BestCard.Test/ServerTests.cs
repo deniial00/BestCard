@@ -13,8 +13,8 @@ public class BattleTests
     [OneTimeSetUp]
     public void SetUpBattleTest()
     {
-        //data.ResetDatabase();
-        //data.InitDatabase();
+        data.ResetDatabase();
+        data.InitDatabase();
     }
 
     [Test, Order(1)]
@@ -39,7 +39,7 @@ public class BattleTests
         if (user1 is null)
             throw new Exception("User1 not found");
 
-        //CardService.AcquirePackage(user1.UserId);
+        CardService.AcquirePackage(user1.UserId);
 
         var cards1 = CardService.GetCardsByUserId(user1.UserId);
 
@@ -58,7 +58,7 @@ public class BattleTests
         if (user2 is null)
             throw new Exception("User2 not found");
 
-        //CardService.AcquirePackage(user2.UserId);
+        CardService.AcquirePackage(user2.UserId);
 
         var cards2 = CardService.GetCardsByUserId(user2.UserId);
 
