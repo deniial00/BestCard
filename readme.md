@@ -1,5 +1,9 @@
 # BestCard: A Monster Card Game
 
+## Installation
+- install postgresql using docker in /db/docker-pg-db.yml
+- open BestCard/BestCard.sln and run server
+
 ## Structure
 
 * Server.cs Class adds Routes by calling AddRoute() function (passes function to be executed when client connects to Endpoints).
