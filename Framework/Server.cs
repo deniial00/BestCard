@@ -149,8 +149,8 @@ try
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not create Package: {ex.Message}");
-            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could not create package: {ex.Message}\" }}");
+            Console.WriteLine($"Could retrieve cards: {ex.Message}");
+            await server.SendResponseAsync(ctx.Response, 400, $"{{ \"error\": \"Could retrieve cards: {ex.Message}\" }}");
         }
 
     });
@@ -269,7 +269,16 @@ try
         {
             var session = server.GetSession(ctx);
 
-            //var stats = 
+            var cred = server.RequestToObject<UserCredentials>(ctx.Request.InputStream);
+
+            if (session.UserID is null)
+                throw new UserNotLoggedInException();
+
+            var stats = BattleService.GetStatistics((int) session.UserID);
+
+            string jsonResponse = JsonConvert.SerializeObject(stats);
+
+            await server.SendResponseAsync(ctx.Response, 200, jsonResponse);
         }
         catch (Exception ex)
         {

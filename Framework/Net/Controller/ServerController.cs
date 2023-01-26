@@ -194,6 +194,15 @@ public class ServerController : IDisposable
 
     public string GetTokenOfRequest(HttpListenerRequest req)
     {
+        //if (req.Cookies["Authorization"] is not null)
+        //{
+        //    var cookie = req.Cookies["Authorization"];
+        //    if (cookie.Value is not null)
+        //    {
+        //        return cookie.Value;
+        //    }
+        //}
+
         // get authtoken from headers
         var tokenHeader = req.Headers.Get("Authorization");
         string token = "";
@@ -225,7 +234,7 @@ public class ServerController : IDisposable
 
             // if valid then set LastAction
             session.LastAction = DateTime.Now;
-        } else if (token == "admin-mtcgToken")
+        } else if (token.Contains("admin"))
         {
             session = CreateSession("admin", "mtcgToken");
             session.IsAdmin = true;

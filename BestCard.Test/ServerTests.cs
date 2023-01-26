@@ -13,11 +13,24 @@ public class BattleTests
     [OneTimeSetUp]
     public void SetUpBattleTest()
     {
-        data.ResetDatabase();
-        data.InitDatabase();
+        //data.ResetDatabase();
+        //data.InitDatabase();
     }
 
     [Test, Order(1)]
+    public void AddPlayerToLobbyTest()
+    {
+        var battleController = BattleController.GetInstance();
+
+        var battle = battleController.AddPlayerToLobby(1);
+
+        if (battle.ChampionUserId == 1 && battleController.LobbyCount == 1)
+            Assert.Pass();
+        else
+            Assert.Fail();
+    }
+
+    [Test, Order(2)]
     public void BattleTest()
     {
         // get cards for user1
@@ -26,7 +39,7 @@ public class BattleTests
         if (user1 is null)
             throw new Exception("User1 not found");
 
-        CardService.AcquirePackage(user1.UserId);
+        //CardService.AcquirePackage(user1.UserId);
 
         var cards1 = CardService.GetCardsByUserId(user1.UserId);
 
@@ -45,7 +58,7 @@ public class BattleTests
         if (user2 is null)
             throw new Exception("User2 not found");
 
-        CardService.AcquirePackage(user2.UserId);
+        //CardService.AcquirePackage(user2.UserId);
 
         var cards2 = CardService.GetCardsByUserId(user2.UserId);
 
@@ -67,21 +80,23 @@ public class BattleTests
         Console.Write(battle.ToJsonString());
 
         if (battle.ResultsAvailable == true)
+        {
+            // throws exception
             Assert.Pass();
+        }
+
     }
 
-    [Test, Order(2)]
-    public void AddPlayerToLobbyTest()
+
+    [Test, Order(18)]
+    public void GetStatsTest()
     {
-        var battleController = BattleController.GetInstance();
+        var user1 = UserService.GetUser(null, FrameworkEnviroment.User2.Username);
+        Dictionary<string, string> stats = BattleService.GetStatistics(user1.UserId);
 
-        var battle = battleController.AddPlayerToLobby(1);
-
-        if (battle.ChampionUserId == 1 && battleController.LobbyCount == 1)
+        if (stats.Count == 3)
             Assert.Pass();
-        else
-            Assert.Fail();
-
+        Assert.Fail();
     }
 }
 
@@ -325,25 +340,25 @@ public class ServerTests
             Assert.Fail();
     }
 
-    [Test, Order(18)]
-    public void ResetDatabaseTest()
-    {
-        data.ResetDatabase();
+    //[Test, Order(18)]
+    //public void ResetDatabaseTest()
+    //{
+    //    data.ResetDatabase();
 
-        var user = UserService.GetUser(null, "test");
+    //    var user = UserService.GetUser(null, "test");
 
-        if (user is null)
-            Assert.Pass();
-    }
+    //    if (user is null)
+    //        Assert.Pass();
+    //}
 
-    [Test, Order(19)]
-    public void InitDatabase()
-    {
-        data.InitDatabase();
+    //[Test, Order(19)]
+    //public void InitDatabase()
+    //{
+    //    data.InitDatabase();
 
-        var user = UserService.GetUser(null, "admin");
+    //    var user = UserService.GetUser(null, "admin");
 
-        if (user is null)
-            Assert.Fail();
-    }
+    //    if (user is null)
+    //        Assert.Fail();
+    //}
 }

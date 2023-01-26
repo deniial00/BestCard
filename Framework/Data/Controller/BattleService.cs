@@ -17,18 +17,17 @@ public static class BattleService
             @"SELECT 
 				(
 					SELECT
-						SUM(champion_elo_change)
+						COALESCE(SUM(champion_elo_change), 0)
 					FROM bestcard.battles
 					WHERE champion_user_id = @userid
 				) +
 				(
 					SELECT
-						SUM(challenger_elo_change)
+						COALESCE(SUM(challenger_elo_change), 0)
 					FROM bestcard.battles
 					WHERE challenger_user_id = @userid
 				)
-				as elo_calc 
-			FROM bestcard.battles;";
+				as elo_calc";
 		var getUserEloCmd = new NpgsqlCommand(getUserEloQuery, db.GetConnection());
 		getUserEloCmd.Parameters.Add(new NpgsqlParameter("@userid", userId));
 
@@ -54,7 +53,8 @@ public static class BattleService
 				challenger_user_id,
 				champion_elo_change,
 				challenger_elo_change,
-				battle_timestamp
+				battle_timestamp,
+				battle_log
 			)
 			VALUES
 			(
@@ -62,7 +62,8 @@ public static class BattleService
 				@challengerId,
 				@championElo,
 				@challengerElo,
-				NOW()
+				NOW(),
+				@battleLog
 			)
 			RETURNING battle_id;";
 
@@ -71,6 +72,7 @@ public static class BattleService
         createBattleCmd.Parameters.Add(new NpgsqlParameter("@challengerId", battle.ChallengerUserId));
         createBattleCmd.Parameters.Add(new NpgsqlParameter("@championElo", battle.ChampionEloChange));
         createBattleCmd.Parameters.Add(new NpgsqlParameter("@challengerElo", battle.ChallengerEloChange));
+		createBattleCmd.Parameters.Add(new NpgsqlParameter("@battleLog", battle.ToJsonString()));
 
 		var battleId = createBattleCmd.ExecuteScalar();
 
@@ -82,6 +84,57 @@ public static class BattleService
 
 		tran.Commit();
 		return (int) battleId;
+	}
+
+	public static Dictionary<string, string> GetStatistics(int userId)
+	{
+		var stats = new Dictionary<string, string>();
+		var conn = DatabaseController.GetInstance().GetConnection();
+
+		string q_getStats = @"
+			SELECT
+				COUNT(
+					CASE WHEN 
+						(champion_elo_change > 0 AND champion_user_id = @userId) OR
+						(challenger_elo_change > 0 AND challenger_user_id = @userId)
+					THEN 1 END
+				) as wins,
+				COUNT(*) as games,
+				(
+					SELECT 
+						(
+							SELECT
+								COALESCE(SUM(champion_elo_change),0)
+							FROM bestcard.battles
+							WHERE champion_user_id = @userId
+						) +
+						(
+							SELECT
+								COALESCE(SUM(challenger_elo_change),0)
+							FROM bestcard.battles
+							WHERE challenger_user_id = @userId
+						)
+				) as elo
+			FROM bestcard.battles
+			WHERE
+				champion_user_id = @userId OR
+				challenger_user_id = @userId";
+		var getStatsCmd = new NpgsqlCommand(q_getStats, conn);
+		getStatsCmd.Parameters.Add(new NpgsqlParameter("@userId", userId));
+
+
+		using (var reader = getStatsCmd.ExecuteReader())
+		{
+			while (reader.Read())
+			{
+				stats.Add("gamesWon", reader.GetInt32(0).ToString());
+				stats.Add("gamesPlayed", reader.GetInt32(1).ToString());
+				stats.Add("elo", reader.GetInt32(2).ToString());
+			}
+
+        }
+
+        return stats;
 	}
 }
 
